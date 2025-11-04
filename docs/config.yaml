@@ -1,8 +1,6 @@
 device:
   device: ''                      # Choose a device: sim, qemu
   cwd: ''                         # path of work directory. eg: /home/work
-  conf_path: ''                   # Path of .config file. eg: path/of/nuttx/.config
-  elf_path: ''                    # Path of NuttX file. eg: path/of/nuttx.elf
   qemu_path: ''                   # Path of qumu execution. eg: path/of/qemu
   qemu_args: ''                   # Args for qemu execution.
 
