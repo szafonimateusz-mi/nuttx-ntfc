@@ -1,4 +1,4 @@
-device:
+config:                           # common, global configuration options
   cwd: ''                         # path of work directory. eg: /home/work
 
 cores:                            # Cores configuration, for know only main_core is used

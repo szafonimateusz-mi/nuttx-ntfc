@@ -51,14 +51,13 @@ class Product:
             raise TypeError("Config instance is required")
 
         self._device = device
-        self._board = conf.device.get("product", "sim")
         self._main_prompt = self._device.prompt
         self._cur_prompt = (
             self._main_prompt
             if isinstance(self._main_prompt, str)
             else self._main_prompt.decode("utf-8", errors="ignore")
         )
-        self._uptime = conf.device.get("uptime", 3)
+        self._uptime = conf.core(cpu=0).get("uptime", 3)
         self._kv_conf = conf.kv_conf
 
         # cores info not ready yet, done in self.init() method called when

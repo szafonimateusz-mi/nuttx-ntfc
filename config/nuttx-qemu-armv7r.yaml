@@ -1,4 +1,4 @@
-device:
+config:
   cwd: './external'
 
 cores:

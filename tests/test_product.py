@@ -24,11 +24,10 @@ from unittest.mock import patch
 import pytest
 
 from ntfc.device.common import CmdReturn, CmdStatus
-from ntfc.envconfig import EnvConfig
 from ntfc.product import Product
 
 
-def test_product_initinval():
+def test_product_initinval(config_dummy):
 
     with pytest.raises(TypeError):
         _ = Product(None, None)
@@ -40,8 +39,7 @@ def test_product_initinval():
         _ = Product(None, 1)
 
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
-        conf = EnvConfig({"device": {"product": "dummy"}})
-        _ = Product(mockdevice, conf)
+        _ = Product(mockdevice, config_dummy)
 
 
 def test_product_get_core_info(config_dummy):
