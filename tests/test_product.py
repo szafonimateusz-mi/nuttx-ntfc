@@ -39,7 +39,7 @@ def test_product_initinval(config_dummy):
         _ = Product(None, 1)
 
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
-        _ = Product(mockdevice, config_dummy)
+        _ = Product(mockdevice, config_dummy.product[0])
 
 
 def test_product_get_core_info(config_dummy):
@@ -50,7 +50,7 @@ def test_product_get_core_info(config_dummy):
             CmdStatus.TIMEOUT
         )
 
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         # send_cmd_read_until_pattern failed
         assert p.get_core_info() == ()
@@ -84,7 +84,7 @@ def test_product_send_command(config_dummy):
         dev.send_cmd_read_until_pattern.return_value = CmdReturn(
             CmdStatus.TIMEOUT
         )
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         # empty command
         with pytest.raises(ValueError):
@@ -117,7 +117,7 @@ def test_product_send_command_read_until_pattern(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
         dev._main_prompt = "nsh>"
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         with pytest.raises(ValueError):
             p.sendCommandReadUntilPattern("")
@@ -140,7 +140,7 @@ def test_product_send_command_read_until_pattern(config_dummy):
 def test_product_send_ctrl_cmd(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         with pytest.raises(ValueError):
             p.sendCtrlCmd("")
@@ -159,7 +159,7 @@ def test_product_switch_core(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
         dev.no_cmd = ""
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         with pytest.raises(ValueError):
             p.switch_core("")
@@ -190,7 +190,7 @@ def test_product_switch_core(config_dummy):
 def test_product_get_current_prompt(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.send_cmd_read_until_pattern.return_value = CmdReturn(
             CmdStatus.NOTFOUND
@@ -206,7 +206,7 @@ def test_product_get_current_prompt(config_dummy):
 def test_product_reboot(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.reboot.return_value = False
         assert p.reboot() is False
@@ -218,7 +218,7 @@ def test_product_reboot(config_dummy):
 def test_product_busyloop(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.busyloop = False
         assert p.busyloop is False
@@ -229,7 +229,7 @@ def test_product_busyloop(config_dummy):
 def test_product_crash(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.crash = False
         assert p.crash is False
@@ -240,7 +240,7 @@ def test_product_crash(config_dummy):
 def test_product_notalive(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.notalive = False
         assert p.notalive is False
@@ -251,7 +251,7 @@ def test_product_notalive(config_dummy):
 def test_product_device_status_checker(config_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        p = Product(dev, config_dummy)
+        p = Product(dev, config_dummy.product[0])
 
         dev.busyloop = False
         dev.crash = False

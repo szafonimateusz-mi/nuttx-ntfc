@@ -24,7 +24,7 @@ import re
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from ntfc.device.common import CmdStatus
-from ntfc.envconfig import EnvConfig
+from ntfc.envconfig import ProductConfig
 from ntfc.logger import logger
 
 if TYPE_CHECKING:
@@ -38,16 +38,16 @@ if TYPE_CHECKING:
 class Product:
     """This class implements product under test."""
 
-    def __init__(self, device: "DeviceCommon", conf: "EnvConfig"):
+    def __init__(self, device: "DeviceCommon", conf: "ProductConfig") -> None:
         """Initialize product under test.
 
         :param device: DeviceCommon instance
-        :param conf: EnvConfig instance
+        :param conf: ProductConfig instance
         """
         if not device:
             raise TypeError("Device instance is required")
 
-        if not isinstance(conf, EnvConfig):
+        if not isinstance(conf, ProductConfig):
             raise TypeError("Config instance is required")
 
         self._device = device
@@ -450,3 +450,8 @@ class Product:
             return "NOTALIVE"
 
         return "NORMAL"
+
+    @property
+    def device(self) -> "DeviceCommon":
+        """Get underlying device."""
+        return self._device

@@ -20,7 +20,10 @@
 
 """NuttX target device implementation."""
 
-from typing import List
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from ntfc.envconfig import ProductConfig
 
 ###############################################################################
 # Class: DeviceNuttx
@@ -39,13 +42,8 @@ class DeviceNuttx:
     _UNAME_RESP = b"NuttX"
     _CRASH_KEYS = [b"Assertion"]
 
-    def __init__(self, conf):
+    def __init__(self, conf: "ProductConfig"):
         """Initialize NuttX device."""
-        # if not 'conf_path' in conf.device or not conf.device['conf_path']:
-        #     raise KeyError("no conf_path in configuration file!")
-        # if not 'elf_path' in conf.device or not conf.device['elf_path']:
-        #     raise KeyError("no elf_path in configuration file!")
-
         self._conf = conf
 
     @property

@@ -18,15 +18,48 @@
 #
 ############################################################################
 
-from ntfc.envconfig import EnvConfig
+from ntfc.envconfig import EnvConfig, ProductConfig
 
 
-def test_envconfig_check():
+def test_product_config():
+
+    conf = {
+        "name": "product",
+        "cores": {
+            "main_core": {
+                "name": "dummy",
+                "device": "sim",
+                "elf_path": "./tests/resources/nuttx/sim/config.yaml",
+                "uptime": 1,
+            },
+            "core1": {
+                "name": "dummy2",
+                "device": "sim2",
+                "elf_path": "./tests/resources/nuttx/sim/config.yaml",
+                "uptime": 1,
+            },
+        },
+    }
+
+    p = ProductConfig(conf)
+
+    assert p.core(0)["name"] == "dummy"
+    assert p.core(0)["device"] == "sim"
+    assert p.core(1)["name"] == "dummy2"
+    assert p.core(1)["device"] == "sim2"
+
+
+def test_envconfig_common():
 
     env = EnvConfig("./tests/resources/nuttx/sim/config.yaml")
 
     # check device options
     assert env.device["cwd"] == "./"
+
+
+def test_envconfig_product():
+
+    env = EnvConfig("./tests/resources/nuttx/sim/config.yaml")
 
     assert env.core()["conf_path"] == "./tests/resources/nuttx/sim/kv_config"
     assert env.core()["elf_path"] == "./tests/resources/nuttx/sim/nuttx"

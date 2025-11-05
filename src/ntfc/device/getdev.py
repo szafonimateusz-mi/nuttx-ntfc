@@ -27,18 +27,16 @@ from .sim import DeviceSim
 
 if TYPE_CHECKING:
     from .common import DeviceCommon
-    from .envconfig import EnvConfig
+    from .envconfig import ProductConfig
 
 ###############################################################################
 # Function: get_device
 ###############################################################################
 
 
-def get_device(
-    conf: "EnvConfig", product: int = 0, cpu: int = 0
-) -> "DeviceCommon":
+def get_device(conf: "ProductConfig", cpu: int = 0) -> "DeviceCommon":
     """Get device from a given name."""
-    devname = conf.core(product=product, cpu=cpu).get("device", None)
+    devname = conf.core(cpu).get("device", None)
 
     if not devname:
         raise ValueError("Unspecified device")

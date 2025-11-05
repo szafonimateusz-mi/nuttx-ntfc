@@ -25,11 +25,11 @@ from ntfc.device.getdev import get_device
 
 def test_getdev_get_device(config_dummy):
 
-    config_dummy.cores_get(product=0)["main_core"]["device"] = "dummy"
+    config_dummy.product_get(0)["cores"]["main_core"]["device"] = "dummy"
 
     with pytest.raises(ValueError):
-        get_device(config_dummy)
+        get_device(config_dummy.product[0])
 
-    config_dummy.cores_get(product=0)["main_core"]["device"] = "sim"
+    config_dummy.product_get(0)["cores"]["main_core"]["device"] = "sim"
 
-    _ = get_device(config_dummy)
+    _ = get_device(config_dummy.product[0])

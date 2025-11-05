@@ -34,7 +34,7 @@ def test_collector_collected_item():
 
 def test_collector_collect_file(config_dummy, device_dummy):
 
-    p = MyPytest(config_dummy, device=device_dummy)
+    p = MyPytest(config_dummy, device=[device_dummy])
     path = "./tests/resources/tests_collect/test_test1.py"
     items, skipped = p.collect(path)
 
@@ -46,7 +46,7 @@ def test_collector_collect_file(config_dummy, device_dummy):
 
 def test_collector_collect_dir(config_dummy, device_dummy):
 
-    p = MyPytest(config_dummy, device=device_dummy)
+    p = MyPytest(config_dummy, device=[device_dummy])
     path = "./tests/resources/tests_collect"
     items, skipped = p.collect(path)
 
@@ -64,7 +64,7 @@ def test_collector_collect_dir(config_dummy, device_dummy):
 
 def test_runner_run_exitcode(config_dummy, device_dummy):
 
-    p = MyPytest(config_dummy, device=device_dummy)
+    p = MyPytest(config_dummy, device=[device_dummy])
 
     path = "./tests/resources/tests_exitcode/test_success.py"
     assert p.runner(path, {}) == 0

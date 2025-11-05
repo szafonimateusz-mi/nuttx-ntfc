@@ -25,7 +25,7 @@ import re
 import signal
 import time
 from threading import Event
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import pexpect
 import psutil
@@ -34,6 +34,9 @@ from ntfc.logger import logger
 
 from .common import CmdReturn, CmdStatus, DeviceCommon
 from .nuttx import DeviceNuttx
+
+if TYPE_CHECKING:
+    from ntfc.envconfig import ProductConfig
 
 ###############################################################################
 # Class: DeviceHost
@@ -45,7 +48,7 @@ class DeviceHost(DeviceCommon):
 
     _BUSY_LOOP_TIMEOUT = 180  # 180 sec with no data read from target
 
-    def __init__(self, conf):
+    def __init__(self, conf: "ProductConfig"):
         """Initialize host based device.
 
         :param conf: configuration handler

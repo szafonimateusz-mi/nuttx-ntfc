@@ -20,7 +20,12 @@
 
 """Host-based simulator implementation."""
 
+from typing import TYPE_CHECKING
+
 from .host import DeviceHost
+
+if TYPE_CHECKING:
+    from ntfc.envconfig import ProductConfig
 
 ###############################################################################
 # Class: DeviceSim
@@ -30,10 +35,9 @@ from .host import DeviceHost
 class DeviceSim(DeviceHost):
     """This class implements host-based sim emulator."""
 
-    def __init__(self, conf):
+    def __init__(self, conf: "ProductConfig"):
         """Initialize sim emulator device."""
         DeviceHost.__init__(self, conf)
-
         self._conf = conf
 
     def start(self) -> None:

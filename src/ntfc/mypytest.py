@@ -24,7 +24,7 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 import pytest
 from pluggy import HookimplMarker
@@ -36,6 +36,7 @@ from ntfc.testfilter import FilterTest
 
 if TYPE_CHECKING:
     from config import EnvConfig
+    from ntfc.device.common import DeviceCommon
 
 # required for plugin
 hookimpl = HookimplMarker("pytest")
@@ -248,7 +249,7 @@ class _RunnerPlugin:
         if self._nologs:
             return
 
-        pytest.device.stop_log_collect()
+        pytest.product.device.stop_log_collect()
 
         # close files
         self._logs["console"].close()
@@ -265,7 +266,7 @@ class _RunnerPlugin:
         self._logs["console"] = open(tmp, "a")
 
         # start device log collector
-        pytest.device.start_log_collect(self._logs)
+        pytest.product.device.start_log_collect(self._logs)
 
     @pytest.fixture(scope="function", autouse=True)
     def prepare_test(self, request) -> None:
@@ -406,9 +407,9 @@ class MyPytest:
         self,
         config: "EnvConfig",
         ignorepath: str = None,
-        exit_on_fail=False,
-        verbose=False,
-        device=None,
+        exit_on_fail: bool = False,
+        verbose: bool = False,
+        device: Optional[List["DeviceCommon"]] = None,
     ) -> None:
         """Initialize pytest wrapper.
 
@@ -439,32 +440,30 @@ class MyPytest:
         # add our custom pytest plugin
         self._plugins.append(self._ptconfig)
 
-        # inject objects into pytest module
-        # REVISIT: we can access device from product, dont need device here ?
-        # REVISTI: fix this mess!!
-
-        pytest.config = config
-
-        if device:
-            pytest.device = device
-        else:
-            pytest.device = get_device(config)
-
-        self._products = self._create_products(config)
+        # inject some objects into pytest module
+        pytest.products = self._create_products(config, device)
         pytest.product = self._get_product(product=0)
         pytest.task = config.product_get(product=0)
 
-    def _create_products(self, config):
+    def _create_products(
+        self, config: "EnvConfig", device: "DeviceCommon"
+    ) -> list:
         """Create products according to configuration."""
-        # REVISIT: support many products at once
         tmp = []
-        p1 = Product(pytest.device, config)
-        tmp.append(p1)
+        for i in range(len(config.product)):
+            if not device or not device[i]:
+                dev = get_device(config.product[i])
+            else:
+                dev = device[i]
+
+            p = Product(dev, config.product[i])
+            tmp.append(p)
+
         return tmp
 
     def _get_product(self, product: int = 0) -> dict:
         """Get product configuration."""
-        return self._products[product]
+        return pytest.products[product]
 
     def _run(self, extra_opt: list, extra_plugins: list) -> int:
         """Run pytest.
@@ -488,7 +487,7 @@ class MyPytest:
 
     def _device_start(self) -> None:
         """Start device to test."""
-        pytest.device.start()
+        pytest.product.device.start()
 
         # finish product initialization
         pytest.product.init()

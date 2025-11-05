@@ -20,7 +20,12 @@
 
 """Host-based QEMU implementation."""
 
+from typing import TYPE_CHECKING
+
 from .host import DeviceHost
+
+if TYPE_CHECKING:
+    from ntfc.envconfig import ProductConfig
 
 ###############################################################################
 # Class: DeviceQemu
@@ -30,13 +35,12 @@ from .host import DeviceHost
 class DeviceQemu(DeviceHost):
     """This class implements host-based QEMU emulator."""
 
-    def __init__(self, conf):
+    def __init__(self, conf: "ProductConfig"):
         """Initialize QEMU emulator device."""
         if "exec_path" not in conf.device or not conf.device["exec_path"]:
             raise KeyError("no exec_path in configuration file!")
 
         DeviceHost.__init__(self, conf)
-
         self._conf = conf
 
     def start(self) -> None:
