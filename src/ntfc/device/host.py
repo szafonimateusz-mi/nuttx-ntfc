@@ -337,6 +337,11 @@ class DeviceHost(DeviceCommon):
         while True:
             output += self._read_all()
 
+            # REVISIT: limit output to last 10000 characters, otherwise
+            # re.search can stack
+            if len(output) > 10000:
+                output = output[-10000:]
+
             # check output for pattern match
             _match = re.search(pattern, output)
             if _match:
