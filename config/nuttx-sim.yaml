@@ -1,29 +1,39 @@
 device:
-  device: 'sim'
   cwd: './external'
 
 cores:
   main_core:
     name: 'main'
+    device: 'sim'
     conf_path: './external/nuttx/.config'
     elf_path: './external/nuttx/nuttx'
+
   core1:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core2:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core3:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core4:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core5:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''

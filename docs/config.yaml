@@ -1,31 +1,41 @@
 device:
-  device: ''                      # Choose a device: sim, qemu
   cwd: ''                         # path of work directory. eg: /home/work
-  exec_path: ''                   # Path of emulator execution. eg: path/of/qemu. Empty for simulator.
-  exec_args: ''                   # Args for emulator execution. Empty for simulator.
 
-cores:                            # cores configuration, for know only main_core is used
-  main_core:                      # main core (core 0)
-    name: ''                      # core name
+cores:                            # Cores configuration, for know only main_core is used
+  main_core:                      # Main core (core 0)
+    name: ''                      # Core name
+    device: ''                    # Choose a device: sim, qemu
+    exec_path: ''                 # Path of emulator execution. eg: path/of/qemu. Empty for simulator.
+    exec_args: ''                 # Args for emulator execution. Empty for simulator.
     conf_path: ''                 # configuration path for this core firmware
     elf_path: ''                  # NuttX ELF path for this core firmware
-  core1:
+
+  core1:                          # Aux core 1 (for AMP test cases)
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
-  core2:
+
+  core2:                          # Aux core 2
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
-  core3:
+
+  core3:                          # Aux core 2
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
-  core4:
+
+  core4:                          # Aux core 2
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
-  core5:
+
+  core5:                          # Aux core 2
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''

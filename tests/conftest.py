@@ -26,7 +26,17 @@ from ntfc.envconfig import EnvConfig
 
 @pytest.fixture
 def config_dummy():
-    conf_dir = {"device": {"device": "dummy", "uptime": 1}}
+    conf_dir = {
+        "device": {},
+        "cores": {
+            "main_core": {
+                "name": "dummy",
+                "device": "sim",
+                "elf_path": "",
+                "uptime": 1,
+            }
+        },
+    }
     conf = EnvConfig(conf_dir)
     return conf
 

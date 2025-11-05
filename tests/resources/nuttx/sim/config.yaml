@@ -1,29 +1,39 @@
 device:
-  device: 'sim'
   cwd: './'
 
 cores:
   main_core:
     name: 'main'
+    device: 'sim'
     conf_path: './tests/resources/nuttx/sim/kv_config'
     elf_path: './tests/resources/nuttx/sim/nuttx'
+
   core1:
     name: 'core1'
+    device: 'sim'
     conf_path: './tests/resources/nuttx/sim/kv_config'
-    elf_path: './tests/resources/nuttx/sim/nuttx' 
+    elf_path: './tests/resources/nuttx/sim/nuttx'
+
   core2:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core3:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core4:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''
+
   core5:
     name: ''
+    device: ''
     conf_path: ''
     elf_path: ''

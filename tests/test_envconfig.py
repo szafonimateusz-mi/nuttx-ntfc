@@ -26,7 +26,6 @@ def test_envconfig_check():
     env = EnvConfig("./tests/resources/nuttx/sim/config.yaml")
 
     # check device options
-    assert env.device["device"] == "sim"
     assert env.device["cwd"] == "./"
 
     assert env.core()["conf_path"] == "./tests/resources/nuttx/sim/kv_config"
@@ -50,6 +49,11 @@ def test_envconfig_check():
     assert env.core(cpu=1)["name"] == "core1"
     assert env.core(cpu=2)["name"] == ""
     assert env.core(cpu=3)["name"] == ""
+
+    assert env.core(cpu=0)["device"] == "sim"
+    assert env.core(cpu=1)["device"] == "sim"
+    assert env.core(cpu=2)["device"] == ""
+    assert env.core(cpu=3)["device"] == ""
 
     # check kconfig options
     assert env.kv_check("dummy") is False

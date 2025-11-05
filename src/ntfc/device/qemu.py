@@ -49,9 +49,9 @@ class DeviceQemu(DeviceHost):
         uptime = self._conf.device.get("uptime", 3)
         kernel_param = "-kernel " + elf
 
-        cmd.append(self._conf.device["exec_path"])
+        cmd.append(self._conf.core(cpu=0)["exec_path"])
         cmd.append(" ")
-        cmd.append(self._conf.device["exec_args"])
+        cmd.append(self._conf.core(cpu=0)["exec_args"])
         cmd.append(" ")
         cmd.append(kernel_param)
 
