@@ -18,53 +18,21 @@
 #
 ############################################################################
 
-"""Host-based QEMU implementation."""
+"""Get device from a given name."""
 
 from typing import TYPE_CHECKING
 
-from .host import DeviceHost
+from .nuttx import DeviceNuttx
 
 if TYPE_CHECKING:
-    from ntfc.envconfig import ProductConfig
+    from .envconfig import ProductConfig
+    from .oscommon import OSCommon
 
 ###############################################################################
-# Class: DeviceQemu
+# Function: get_device
 ###############################################################################
 
 
-class DeviceQemu(DeviceHost):
-    """This class implements host-based QEMU emulator."""
-
-    def __init__(self, conf: "ProductConfig"):
-        """Initialize QEMU emulator device."""
-        DeviceHost.__init__(self, conf)
-        self._conf = conf
-
-    def start(self) -> None:
-        """Start QEMU emulator."""
-        elf = self._conf.core(cpu=0)["elf_path"]
-        exec_path = self._conf.core(cpu=0)["exec_path"]
-        exec_args = self._conf.core(cpu=0)["exec_args"]
-
-        if not elf:
-            raise IOError
-        if not exec_path:
-            raise KeyError("no exec_path in configuration file!")
-
-        cmd = []
-        uptime = self._conf.core(cpu=0).get("uptime", 3)
-        kernel_param = "-kernel " + elf
-
-        cmd.append(exec_path)
-        cmd.append(" ")
-        cmd.append(exec_args)
-        cmd.append(" ")
-        cmd.append(kernel_param)
-
-        # open host-based emulation
-        self.host_open(cmd, uptime)
-
-    @property
-    def name(self) -> str:
-        """Get device name."""
-        return "qemu"
+def get_os(conf: "ProductConfig") -> "OSCommon":
+    """Get OS abstraction."""
+    return DeviceNuttx(conf)  # only NuttX supported now

@@ -33,7 +33,7 @@ import psutil
 from ntfc.logger import logger
 
 from .common import CmdReturn, CmdStatus, DeviceCommon
-from .nuttx import DeviceNuttx
+from .getos import get_os
 
 if TYPE_CHECKING:
     from ntfc.envconfig import ProductConfig
@@ -62,9 +62,8 @@ class DeviceHost(DeviceCommon):
         self._busy_loop = Event()
         self._busy_loop_last = 0
 
-        # TODO: pass as init argument
-        #       now we use NuttX as default target
-        self._dev = DeviceNuttx(conf)
+        # get OS abstraction
+        self._dev = get_os(conf)
 
     def _dev_is_health(self) -> bool:
         """Check if the host device is OK."""

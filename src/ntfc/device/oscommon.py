@@ -18,68 +18,50 @@
 #
 ############################################################################
 
-"""NuttX target device implementation."""
+"""OS abstraction."""
 
-from typing import TYPE_CHECKING, List
-
-from .oscommon import OSCommon
-
-if TYPE_CHECKING:
-    from ntfc.envconfig import ProductConfig
+from abc import ABC, abstractmethod
+from typing import List
 
 ###############################################################################
-# Class: DeviceNuttx
+# Class: OSCommon
 ###############################################################################
 
 
-class DeviceNuttx(OSCommon):
-    """This class implements NuttX target device."""
-
-    _PROMPT = b"nsh>"
-    _NO_CMD = "command not found"
-    _HELP_CMD = b"help"
-    _POWEROFF_CMD = b"poweroff"
-    _REBOOT_CMD = b"reboot"
-    _UNAME_CMD = b"uname -o"
-    _UNAME_RESP = b"NuttX"
-    _CRASH_KEYS = [b"Assertion"]
-
-    def __init__(self, conf: "ProductConfig"):
-        """Initialize NuttX OS abstraction."""
-        self._conf = conf
-        # TODO: login, password etc
+class OSCommon(ABC):
+    """OS abstraction common."""
 
     @property
+    @abstractmethod
     def prompt(self) -> bytes:
         """Get prompt."""
-        return self._PROMPT
 
     @property
+    @abstractmethod
     def no_cmd(self) -> str:
         """Get command not found string."""
-        return self._NO_CMD
 
     @property
+    @abstractmethod
     def help_cmd(self) -> bytes:
         """Get help command."""
-        return self._HELP_CMD
 
     @property
+    @abstractmethod
     def poweroff_cmd(self) -> bytes:
         """Get poweroff command."""
-        return self._POWEROFF_CMD
 
     @property
+    @abstractmethod
     def reboot_cmd(self) -> bytes:
         """Get reboot command."""
-        return self._REBOOT_CMD
 
     @property
+    @abstractmethod
     def uname_cmd(self) -> bytes:
         """Get uname command."""
-        return self._UNAME_CMD
 
     @property
+    @abstractmethod
     def crash_keys(self) -> List[bytes]:
         """Get keys related to OS crash."""
-        return self._CRASH_KEYS

@@ -30,9 +30,10 @@ def test_device_qemu_open():
     with patch("ntfc.envconfig.EnvConfig") as mockdevice:
         config = mockdevice.return_value
 
-        with pytest.raises(KeyError):
-            _ = DeviceQemu(config)
-
-        config.device = {"exec_path": "dummy"}
+        config.core.return_value = {"exec_path": ""}
         qemu = DeviceQemu(config)
+
+        with pytest.raises(KeyError):
+            qemu.start()
+
         assert qemu.name == "qemu"
