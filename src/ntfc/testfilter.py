@@ -20,7 +20,7 @@
 
 """Test cases filter."""
 
-from typing import Tuple
+from typing import List, Tuple
 
 from ntfc.logger import logger
 
@@ -32,11 +32,11 @@ from ntfc.logger import logger
 class FilterTest:
     """This class implements test filtration depending on the configuration."""
 
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         """Initialize test filter."""
         self._config = config
 
-    def extract_test_requirements(self, item):
+    def extract_test_requirements(self, item) -> Tuple[List, List, List]:
         """Extract test requirements from markers.
 
         :param item: Pytest test item object

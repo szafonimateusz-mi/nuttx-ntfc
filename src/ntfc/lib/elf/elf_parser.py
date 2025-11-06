@@ -49,7 +49,7 @@ class ElfParser:
             raise AttributeError
 
         self.elf_path = elf_path
-        self._symbols = None
+        self._symbols: List[Symbol] = []
 
     def _is_elf_file(self, path: str) -> bool:
         """Check if this is ELF file."""
@@ -63,7 +63,7 @@ class ElfParser:
     @property
     def symbols(self) -> List[Symbol]:
         """Get all symbols from ELF file."""
-        if self._symbols is None:
+        if not self._symbols:
             self._symbols = self._extract_symbols()
         return self._symbols
 

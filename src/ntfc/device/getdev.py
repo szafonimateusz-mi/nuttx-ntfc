@@ -26,8 +26,9 @@ from .qemu import DeviceQemu
 from .sim import DeviceSim
 
 if TYPE_CHECKING:
+    from ntfc.envconfig import ProductConfig
+
     from .common import DeviceCommon
-    from .envconfig import ProductConfig
 
 ###############################################################################
 # Function: get_device
@@ -40,6 +41,8 @@ def get_device(conf: "ProductConfig", cpu: int = 0) -> "DeviceCommon":
 
     if not devname:
         raise ValueError("Unspecified device")
+
+    device: "DeviceCommon"
 
     if devname == "sim":
         device = DeviceSim(conf)

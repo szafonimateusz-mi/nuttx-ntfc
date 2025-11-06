@@ -24,7 +24,7 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import pytest
 from pluggy import HookimplMarker
@@ -35,8 +35,9 @@ from ntfc.product import Product
 from ntfc.testfilter import FilterTest
 
 if TYPE_CHECKING:
-    from config import EnvConfig
     from ntfc.device.common import DeviceCommon
+
+    from .envconfig import EnvConfig
 
 # required for plugin
 hookimpl = HookimplMarker("pytest")
@@ -58,20 +59,20 @@ class _PytestConfigPlugin:
 
         self._filter = FilterTest(config)
 
-        self._skipped_items = []
+        self._skipped_items: List[Tuple[pytest.Item, str]] = []
 
     def _device_reboot(self) -> None:
         """Reboot the device if crashed."""
         pytest.product.reboot()
 
-    def _generate_coredump_file(self, reason) -> None:
+    def _generate_coredump_file(self, reason: Any) -> None:
         """Generate coredump file.
 
         :param reason:
         """
         # not supported yet
 
-    def pytest_configure(self, config) -> None:
+    def pytest_configure(self, config: pytest.Config) -> None:
         """Everything you would have put in pytest.ini.
 
         :param config: pytest config
@@ -103,20 +104,21 @@ class _PytestConfigPlugin:
             config.addinivalue_line("markers", m)
 
     @property
-    def skipped_items(self) -> list:
+    def skipped_items(self) -> List[Tuple[pytest.Item, str]]:
         """Get skipped items."""
         return self._skipped_items
 
-    def pytest_collection_modifyitems(self, config, items) -> None:
+    def pytest_collection_modifyitems(
+        self, config: pytest.Config, items: list[pytest.Item]
+    ) -> None:
         """Modify the `items` list after collection is completed.
 
         :param config:
         :param items:
         """
-        collected_items = []
+        collected_items: List[Any] = []
 
         for item in items:
-
             skip, reason = self._filter.check_test_support(item)
 
             if skip:
@@ -130,7 +132,9 @@ class _PytestConfigPlugin:
         # Update the items list to only include filtered items
         items[:] = collected_items
 
-    def pytest_runtest_makereport(self, item, call) -> None:  # noqa: C901
+    def pytest_runtest_makereport(  # noqa: C901
+        self, item: pytest.Item, call: pytest.CallInfo[None]
+    ) -> Any:
         """Create a TestReport for each of the runtest phases.
 
         :param item:
@@ -240,7 +244,7 @@ class _PytestConfigPlugin:
 class _RunnerPlugin:
     def __init__(self, nologs: bool = False) -> None:
         """Initialize custom pytest test runner plugin."""
-        self._logs = {}
+        self._logs: Dict[str, Any] = {}
         self._nologs = nologs
 
     def _collect_device_logs_teardown(self) -> None:
@@ -283,57 +287,6 @@ class _RunnerPlugin:
     @pytest.fixture
     def core(self) -> None:
         pass
-
-
-###############################################################################
-# Class: _CollectorPlugin
-###############################################################################
-
-
-class _CollectorPlugin:
-    def __init__(self) -> None:
-        """Initialize custom pytest collector plugin."""
-        self.collected_items = []
-        self.skipped_items = []
-        self.parsed_items = []
-
-    @property
-    def collected(self) -> list:
-        """Get collected items."""
-        return self.collected_items
-
-    @property
-    def skipped(self) -> list:
-        """Get skipped items."""
-        return self.skipped_items
-
-    @property
-    def parsed(self) -> list:
-        """Get collected items in parsed format."""
-        return self.parsed_items
-
-    def pytest_runtestloop(self, session) -> bool:
-        """Prevent tests from running.
-
-        Returning True stops test execution.
-        """
-        return True
-
-    def pytest_collection_finish(self, session) -> None:
-        """Pytest collection finish callback."""
-        self.collected_items.extend(session.items)
-
-        # extract useful data from items
-        for item in session.items:
-            path, lineno, name = item.location
-            abs_path = os.path.abspath(path)
-            directory = os.path.dirname(abs_path)
-            module = os.path.splitext(os.path.basename(path))[0]
-
-            ci = _CollectedItem(
-                directory, module, name, abs_path, lineno, item.nodeid
-            )
-            self.parsed_items.append(ci)
 
 
 ###############################################################################
@@ -396,6 +349,57 @@ class _CollectedItem:
 
 
 ###############################################################################
+# Class: _CollectorPlugin
+###############################################################################
+
+
+class _CollectorPlugin:
+    def __init__(self) -> None:
+        """Initialize custom pytest collector plugin."""
+        self.collected_items: List[Tuple[Any, Any]] = []
+        self.skipped_items: List[Tuple[str, str]] = []
+        self.parsed_items: List[_CollectedItem] = []
+
+    @property
+    def collected(self) -> List[Tuple[Any, Any]]:
+        """Get collected items."""
+        return self.collected_items
+
+    @property
+    def skipped(self) -> List[Tuple[str, str]]:
+        """Get skipped items."""
+        return self.skipped_items
+
+    @property
+    def parsed(self) -> List[_CollectedItem]:
+        """Get collected items in parsed format."""
+        return self.parsed_items
+
+    def pytest_runtestloop(self, session: pytest.Session) -> bool:
+        """Prevent tests from running.
+
+        Returning True stops test execution.
+        """
+        return True
+
+    def pytest_collection_finish(self, session: pytest.Session) -> None:
+        """Pytest collection finish callback."""
+        self.collected_items.extend(session.items)
+
+        # extract useful data from items
+        for item in session.items:
+            path, lineno, name = item.location
+            abs_path = os.path.abspath(path)
+            directory = os.path.dirname(abs_path)
+            module = os.path.splitext(os.path.basename(path))[0]
+
+            ci = _CollectedItem(
+                directory, module, name, abs_path, lineno, item.nodeid
+            )
+            self.parsed_items.append(ci)
+
+
+###############################################################################
 # Class: MyPytest
 ###############################################################################
 
@@ -406,7 +410,7 @@ class MyPytest:
     def __init__(
         self,
         config: "EnvConfig",
-        ignorepath: str = None,
+        ignorepath: Optional[str] = None,
         exit_on_fail: bool = False,
         verbose: bool = False,
         device: Optional[List["DeviceCommon"]] = None,
@@ -428,7 +432,8 @@ class MyPytest:
             self._opt.append("-qq")
 
         # ignore tests
-        self.ignore_tests(ignorepath)
+        if ignorepath:
+            self.ignore_tests(ignorepath)
 
         # configure plugin
         hookimpl_marker = hookimpl(hookwrapper=True)
@@ -446,8 +451,8 @@ class MyPytest:
         pytest.task = config.product_get(product=0)
 
     def _create_products(
-        self, config: "EnvConfig", device: "DeviceCommon"
-    ) -> list:
+        self, config: "EnvConfig", device: Optional[List["DeviceCommon"]]
+    ) -> List[Product]:
         """Create products according to configuration."""
         tmp = []
         for i in range(len(config.product)):
@@ -461,11 +466,11 @@ class MyPytest:
 
         return tmp
 
-    def _get_product(self, product: int = 0) -> dict:
+    def _get_product(self, product: int = 0) -> Dict[str, str]:
         """Get product configuration."""
         return pytest.products[product]
 
-    def _run(self, extra_opt: list, extra_plugins: list) -> int:
+    def _run(self, extra_opt: List[str], extra_plugins: List[Any]) -> int:
         """Run pytest.
 
         :param extra_opt:
@@ -496,9 +501,9 @@ class MyPytest:
         """Ignore tests specified in $CWD/ignore.txt file."""
         try:
             logger.info(f"ignore file {path}")
-            path = Path(path)
+            _path = Path(path)
 
-            with open(path) as f:
+            with open(_path) as f:
                 for line in f:
                     if line[0] == "-" and line[1] == "-":
                         self._opt.append(line[:-1])
@@ -509,7 +514,9 @@ class MyPytest:
             logger.info("no ignore file")
             pass
 
-    def runner(self, testpath: str, result: dir, nologs: bool = False) -> int:
+    def runner(
+        self, testpath: str, result: Dict[str, str], nologs: bool = False
+    ) -> int:
         """Run tests.
 
         :param testpath: path to test directory
@@ -543,7 +550,7 @@ class MyPytest:
 
         return self._run(opt, [runner])
 
-    def collect(self, testpath) -> list:
+    def collect(self, testpath: str) -> Tuple[List[Any], List[Any]]:
         """Collect tests.
 
         :param testpath:

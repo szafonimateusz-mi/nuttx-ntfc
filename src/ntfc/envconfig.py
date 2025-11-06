@@ -21,7 +21,7 @@
 """Configuration handler."""
 
 import pprint
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import yaml
 
@@ -133,7 +133,7 @@ class ProductConfig:
 class EnvConfig:
     """This class handles tests environment configuration."""
 
-    def __init__(self, yaml_cfg: Union[str, Dict], args=None):
+    def __init__(self, yaml_cfg: Union[str, Dict], args=None) -> None:
         """Initialzie tests environment configuration."""
         self._args = []
         self._cfg_values = {}
@@ -149,7 +149,7 @@ class EnvConfig:
 
         self._print_config()
 
-    def _products_create(self, config: dict):
+    def _products_create(self, config: dict) -> List[ProductConfig]:
         """Create product configuration."""
         products = []
         for k in config.keys():

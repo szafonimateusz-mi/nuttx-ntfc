@@ -25,7 +25,7 @@ import re
 import signal
 import time
 from threading import Event
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import pexpect
 import psutil
@@ -55,9 +55,8 @@ class DeviceHost(DeviceCommon):
         """
         self._child = None
         self._cwd = None
-        self._cmd = None
-        self._logs = None
-
+        self._cmd: Optional[List[str]] = None
+        self._logs: Optional[Dict[str, Any]] = None
         self._crash = Event()
         self._busy_loop = Event()
         self._busy_loop_last = 0
@@ -67,6 +66,9 @@ class DeviceHost(DeviceCommon):
 
     def _dev_is_health(self) -> bool:
         """Check if the host device is OK."""
+        if not self._child:
+            return False
+
         if not self._child.isalive():
             return False
 
@@ -75,9 +77,12 @@ class DeviceHost(DeviceCommon):
 
         return True
 
-    def _dev_reopen(self):
+    def _dev_reopen(self) -> pexpect.spawn:
         """Reopen host device."""
         self.host_close()
+        if not self._cmd:
+            raise ValueError("Host open command is empty")
+
         return self.host_open(self._cmd)
 
     def _console_log(self, data: bytes) -> None:
@@ -87,6 +92,9 @@ class DeviceHost(DeviceCommon):
 
     def _write(self, data: bytes) -> None:
         """Write to the host device."""
+        if not self._child:
+            raise IOError("Host device is not open")
+
         if not self._dev_is_health():
             return
 
@@ -104,6 +112,9 @@ class DeviceHost(DeviceCommon):
 
     def _write_ctrl(self, c: str) -> None:
         """Write a control character to the host device."""
+        if not self._child:
+            raise IOError("Host device is not open")
+
         if not self._dev_is_health():
             return
 
@@ -149,7 +160,7 @@ class DeviceHost(DeviceCommon):
         except BaseException:
             raise
 
-    def _read_all(self, timeout=1) -> bytes:
+    def _read_all(self, timeout: int = 1) -> bytes:
         """Read data from the host device."""
         if not self._child:
             raise IOError("Host device is not open")
@@ -207,7 +218,7 @@ class DeviceHost(DeviceCommon):
 
         return False
 
-    def _kill_process_group(self, process: pexpect.spawn):
+    def _kill_process_group(self, process: pexpect.spawn) -> None:
         """Kill process group."""
         pid = process.pid
 
@@ -230,7 +241,7 @@ class DeviceHost(DeviceCommon):
             logger.info(f"Sent SIGKILL to process group {pid}")
 
     @property
-    def prompt(self) -> str:
+    def prompt(self) -> bytes:
         """Return target device prompt."""
         return self._dev.prompt
 
@@ -239,7 +250,7 @@ class DeviceHost(DeviceCommon):
         """Return command not found string."""
         return self._dev.no_cmd
 
-    def host_open(self, cmd: List[str], uptime: int = 0):
+    def host_open(self, cmd: List[str], uptime: int = 0) -> pexpect.spawn:
         """Open host-based target device."""
         if self._child:
             raise IOError("Host device already open")
@@ -265,7 +276,7 @@ class DeviceHost(DeviceCommon):
 
         return self._child
 
-    def host_close(self):
+    def host_close(self) -> None:
         """Close host-based target device."""
         if not self._child:
             raise IOError("Host device not ready")
@@ -311,7 +322,7 @@ class DeviceHost(DeviceCommon):
 
     def send_cmd_read_until_pattern(
         self, cmd: bytes, pattern: bytes, timeout: int
-    ):
+    ) -> CmdReturn:
         """Send command to device and read until the specified pattern.
 
         :param cmd: (bytes) command to send to device
@@ -364,7 +375,7 @@ class DeviceHost(DeviceCommon):
         self._console_log(output)
         return CmdReturn(ret, _match, output.decode("utf-8"))
 
-    def send_ctrl_cmd(self, ctrl_char: str):
+    def send_ctrl_cmd(self, ctrl_char: str) -> CmdStatus:
         """Send control command to the device."""
         if not self._child:
             raise IOError("Host device is not open")
@@ -405,7 +416,7 @@ class DeviceHost(DeviceCommon):
         """Reboot the device."""
         return True if self._dev_reopen() else False
 
-    def start_log_collect(self, logs) -> None:
+    def start_log_collect(self, logs: Dict[str, Any]) -> None:
         """Start device log collector."""
         self._logs = logs
 

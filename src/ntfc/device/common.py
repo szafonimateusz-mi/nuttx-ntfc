@@ -23,7 +23,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import astuple, dataclass
 from enum import IntEnum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     import re
@@ -40,7 +40,7 @@ class CmdStatus(IntEnum):
     NOTFOUND = -1
     TIMEOUT = -2
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return enum string."""
         return self.name
 
@@ -55,14 +55,14 @@ class CmdReturn:
     """Command return data."""
 
     status: CmdStatus
-    rematch: "Optional[re.Match]" = None
+    rematch: "Optional[re.Match[Any]]" = None
     output: str = ""
 
-    def valid_match(self):
+    def valid_match(self) -> bool:
         """Check if RE match is valid."""
-        return (self.status == CmdStatus.SUCCESS) and self.rematch
+        return bool((self.status == CmdStatus.SUCCESS) and self.rematch)
 
-    def __iter__(self):
+    def __iter__(self) -> Any:
         """Make the dataclass instance iterable."""
         for value in astuple(self):
             yield value
@@ -90,32 +90,38 @@ class DeviceCommon(ABC):
     def send_ctrl_cmd(self, ctrl_char: str) -> CmdStatus:
         """Send control command to the device."""
 
+    @property
     @abstractmethod
     def name(self) -> str:
         """Get device name."""
 
+    @property
     @abstractmethod
-    def prompt(self) -> str:
+    def prompt(self) -> bytes:
         """Return target device prompt."""
 
+    @property
     @abstractmethod
     def no_cmd(self) -> str:
         """Return command not found string."""
 
+    @property
     @abstractmethod
     def busyloop(self) -> bool:
         """Check if the device is in busy loop."""
 
+    @property
     @abstractmethod
     def crash(self) -> bool:
         """Check if the device is crashed."""
 
+    @property
     @abstractmethod
     def notalive(self) -> bool:
         """Check if the device is dead."""
 
     @abstractmethod
-    def poweroff(self):
+    def poweroff(self) -> None:
         """Poweroff the device."""
 
     @abstractmethod
@@ -123,7 +129,7 @@ class DeviceCommon(ABC):
         """Reboot the device."""
 
     @abstractmethod
-    def start_log_collect(self, logs) -> None:
+    def start_log_collect(self, logs: dict[str, Any]) -> None:
         """Start device log collector."""
 
     @abstractmethod

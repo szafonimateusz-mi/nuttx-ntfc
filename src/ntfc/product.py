@@ -21,7 +21,7 @@
 """Product class implementation."""
 
 import re
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 from ntfc.device.common import CmdStatus
 from ntfc.envconfig import ProductConfig
@@ -62,9 +62,9 @@ class Product:
 
         # cores info not ready yet, done in self.init() method called when
         # device is ready
-        self._main_core = None
-        self._cur_core = None
-        self._cores = None
+        self._main_core: Optional[str] = None
+        self._cur_core: Optional[str] = None
+        self._cores: Optional[Tuple[str, ...]] = None
 
     def _prepare_command(
         self, cmd: str, args: Optional[Union[str, List[str]]]
@@ -151,7 +151,7 @@ class Product:
 
         return cmd_bytes, pattern_bytes
 
-    def _match_not_found(self, rematch: Optional[re.Match]) -> bool:
+    def _match_not_found(self, rematch: Optional[re.Match[Any]]) -> bool:
         """Check for 'command not found' message."""
         if not rematch:
             return False
@@ -165,7 +165,7 @@ class Product:
         cores = self.get_core_info()
         self._main_core = cores[0] if cores else "ap"
         self._cur_core = self._main_core
-        self._cores = cores if cores else ["ap"]
+        self._cores = cores if cores else ("ap",)
         logger.info(f"Current product support cores: {self._cores}")
 
     def sendCommand(  # noqa: N802
@@ -220,7 +220,7 @@ class Product:
         pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
-    ) -> Tuple[int, Optional[re.Match], str]:
+    ) -> Tuple[int, Optional[re.Match[Any]], str]:
         """Send command to device and read until a specific pattern.
 
         :param cmd: (str or list of strs) command to send to device
@@ -374,7 +374,7 @@ class Product:
 
         for _ in range(5):
             cmdret = self._device.send_cmd_read_until_pattern(
-                "\n", core_pattern
+                "\n", core_pattern, 1
             )
 
             if cmdret.valid_match():
@@ -393,7 +393,7 @@ class Product:
         logger.error("Failed to get current prompt, use default prompt.")
         return ">"
 
-    def reboot(self, timeout=30) -> bool:
+    def reboot(self, timeout: int = 30) -> bool:
         """Reboot the device by calling the device's reboot function.
 
         :param timeout: (int) Timeout in seconds for the reboot operation.
@@ -430,7 +430,7 @@ class Product:
         return self._device.notalive
 
     @property
-    def cur_core(self) -> str:
+    def cur_core(self) -> Optional[str]:
         """Get current core."""
         return self._cur_core
 
