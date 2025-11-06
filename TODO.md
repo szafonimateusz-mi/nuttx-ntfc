@@ -9,9 +9,14 @@ This is a to-do list for the NTFC project.
 - [ ] (SOMEDAY) Fix pylint issues.
 - [ ] (SOMEDAY) Fix mypy issues (typing).
 
+## Documentation
+
+- [ ] Details on what exactly NFC does
+- [ ] Guide on how to write your own test cases
+- [ ] Guide on how to support your own boards (YAML config)
+
 ## Features
 
-- [ ] Support for other QEMU boards (defconfig and YAML config).
 - [ ] Support for serial port communication with the device.
 - [ ] Support for hardware reset if the device support this feature.
       Required for real HW testing, for QEMU we can use QEMU monitor.
