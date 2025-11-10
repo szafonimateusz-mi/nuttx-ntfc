@@ -8,8 +8,12 @@ product:                          # many products can be supported in tests (pro
     main_core:                    # Main core (core 0)
       name: ''                    # Core name
       device: ''                  # Choose a device: sim, qemu
-      exec_path: ''               # Path of emulator execution. eg: path/of/qemu. Empty for simulator.
-      exec_args: ''               # Args for emulator execution. Empty for simulator.
+      exec_path: ''               # Path of emulator execution for QEMU targets eg: `qemu-system-x86_64`
+                                  # Path of serial port for serial targets, eg: `/dev/ttyACM0`
+                                  # Empty for simulator.
+      exec_args: ''               # Args for emulator execution for QEMU tragets.
+                                  # Serial port configuration for serial targets, eg '9600,n,8,1'
+                                  # Empty for simulator.
       conf_path: ''               # configuration path for this core firmware
       elf_path: ''                # NuttX ELF path for this core firmware
 

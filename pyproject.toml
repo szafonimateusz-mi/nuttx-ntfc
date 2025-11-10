@@ -33,6 +33,7 @@ dependencies = [
          "pyelftools",
          "pexpect",
          "psutil",
+         "pyserial",
          "pytest",
          "pytest-dependency",
          "pytest-repeat",

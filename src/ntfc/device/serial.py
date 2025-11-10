@@ -18,17 +18,19 @@
 #
 ############################################################################
 
-"""Host-based emulated devices."""
+"""Serial-based device implementation."""
 
-import os
 import re
-import signal
 import time
 from threading import Event
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Optional,
+)
 
-import pexpect
-import psutil
+import serial
 
 from ntfc.logger import logger
 
@@ -39,23 +41,19 @@ if TYPE_CHECKING:
     from ntfc.envconfig import ProductConfig
 
 ###############################################################################
-# Class: DeviceHost
+# Class: DeviceSerial
 ###############################################################################
 
 
-class DeviceHost(DeviceCommon):
-    """This class implements common interface for host emulated devices."""
+class DeviceSerial(DeviceCommon):
+    """This class implements host-based sim emulator."""
 
     _BUSY_LOOP_TIMEOUT = 180  # 180 sec with no data read from target
 
     def __init__(self, conf: "ProductConfig"):
-        """Initialize host based device.
-
-        :param conf: configuration handler
-        """
-        self._child = None
-        self._cwd = None
-        self._cmd: Optional[List[str]] = None
+        """Initialize sim emulator device."""
+        self._conf = conf
+        self._ser = None
         self._logs: Optional[Dict[str, Any]] = None
         self._crash = Event()
         self._busy_loop = Event()
@@ -64,12 +62,52 @@ class DeviceHost(DeviceCommon):
         # get OS abstraction
         self._dev = get_os(conf)
 
-    def _dev_is_health(self) -> bool:
-        """Check if the host device is OK."""
-        if not self._child:
-            return False
+    def _decode_exec_args(self, args: str):
+        """Decode a serial port configuration string."""
+        try:
+            baud, parity, data_bits, stop_bits = args.split(",")
 
-        if not self._child.isalive():
+            parity_map = {
+                "n": serial.PARITY_NONE,
+                "N": serial.PARITY_NONE,
+                "e": serial.PARITY_EVEN,
+                "E": serial.PARITY_EVEN,
+                "o": serial.PARITY_ODD,
+                "O": serial.PARITY_ODD,
+                "m": serial.PARITY_MARK,
+                "M": serial.PARITY_MARK,
+                "s": serial.PARITY_SPACE,
+                "S": serial.PARITY_SPACE,
+            }
+
+            bytesize_map = {
+                5: serial.FIVEBITS,
+                6: serial.SIXBITS,
+                7: serial.SEVENBITS,
+                8: serial.EIGHTBITS,
+            }
+
+            stopbits_map = {
+                1: serial.STOPBITS_ONE,
+                1.5: serial.STOPBITS_ONE_POINT_FIVE,
+                2: serial.STOPBITS_TWO,
+            }
+
+            return {
+                "baudrate": int(baud),
+                "parity": parity_map.get(parity, serial.PARITY_NONE),
+                "bytesize": bytesize_map.get(int(data_bits), serial.EIGHTBITS),
+                "stopbits": stopbits_map.get(
+                    float(stop_bits), serial.STOPBITS_ONE
+                ),
+            }
+
+        except Exception as e:
+            raise ValueError(f"Invalid format '{args}': {e}")
+
+    def _dev_is_health(self) -> bool:
+        """Check if the serial device is OK."""
+        if not self._ser:
             return False
 
         if self._crash.is_set():
@@ -80,22 +118,14 @@ class DeviceHost(DeviceCommon):
 
         return True
 
-    def _dev_reopen(self) -> pexpect.spawn:
-        """Reopen host device."""
-        self.host_close()
-        if not self._cmd:
-            raise ValueError("Host open command is empty")
-
-        return self.host_open(self._cmd)
-
     def _console_log(self, data: bytes) -> None:
         """Log console output."""
         if self._logs is not None:
             self._logs["console"].write(data.decode("utf-8"))
 
     def _write(self, data: bytes) -> None:
-        """Write to the host device."""
-        if not self._child:
+        """Write to the serial device."""
+        if not self._ser:
             raise IOError("Host device is not open")
 
         if not self._dev_is_health():
@@ -103,70 +133,40 @@ class DeviceHost(DeviceCommon):
 
         # send char by char to avoid line length full
         for c in data:
-            self._child.send(bytes([c]))
+            self._ser.write(bytes([c]))
 
         # add new line if missing
         if data[-1] != b"\n":
-            self._child.send(b"\n")
+            self._ser.write(b"\n")
 
         # read all garbage left by character echo
         _ = self._read_all(timeout=0)
         self._console_log(_)
 
     def _write_ctrl(self, c: str) -> None:
-        """Write a control character to the host device."""
-        if not self._child:
-            raise IOError("Host device is not open")
+        """Write a control character to the serial device."""
+        if not self._ser:
+            raise IOError("serial device is not open")
 
         if not self._dev_is_health():
             return
 
-        self._child.sendcontrol(c)
-
-    def _readline(self) -> bytes:
-        """Read line from the host device."""
-        if not self._child:
-            raise IOError("Host device is not open")
-
-        if not self._dev_is_health():
-            return b""
-
-        try:
-            data = self._child.readline()
-            return data
-
-        except pexpect.TIMEOUT:
-            self._write(b"\n")
-            logger.debug("Timeout while reading from device")
-            return b""
-
-        except BaseException:
-            raise
+        self._ser.write(bytes([c]))
 
     def _read(self) -> bytes:
-        """Read data from the host device."""
-        if not self._child:
-            raise IOError("Host device is not open")
+        """Read data from the serial device."""
+        if not self._ser:
+            raise IOError("serial device is not open")
 
         if not self._dev_is_health():
             return b""
 
-        try:
-            return self._child.read_nonblocking(size=1024, timeout=1)
-
-        except pexpect.TIMEOUT:
-            return b""
-
-        except pexpect.EOF:
-            return b""
-
-        except BaseException:
-            raise
+        return self._ser.read(size=1024)
 
     def _read_all(self, timeout: int = 1) -> bytes:
-        """Read data from the host device."""
-        if not self._child:
-            raise IOError("Host device is not open")
+        """Read data from the serial device."""
+        if not self._ser:
+            raise IOError("serial device is not open")
 
         if not self._dev_is_health():
             return b""
@@ -201,6 +201,9 @@ class DeviceHost(DeviceCommon):
             if time_now > end_time:
                 break
 
+            # need to sleep for a while, otherwise host CPU load jumps to 100%
+            time.sleep(0.1)
+
         # regex pattern to match ANSI escape sequences
         ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         # clean output from garbage
@@ -208,7 +211,7 @@ class DeviceHost(DeviceCommon):
 
         return clean
 
-    def _wait_for_boot(self, timeout: int = 10) -> bool:
+    def _wait_for_boot(self, timeout: int = 5) -> bool:
         """Wait for device booted."""
         end_time = time.time() + timeout
         while time.time() < end_time:
@@ -221,93 +224,37 @@ class DeviceHost(DeviceCommon):
 
         return False
 
-    def _kill_process_group(self, process: pexpect.spawn) -> None:
-        """Kill process group."""
-        pid = process.pid
+    def start(self) -> None:
+        """Start serial communication."""
+        timeout = 0
+        path = self._conf.core()["exec_path"]
+        args = self._conf.core()["exec_args"]
 
-        # terminate process gracefully
-        os.killpg(pid, signal.SIGTERM)
+        logger.info(f"serial path: {path}")
+        logger.info(f"serial args: {args}")
 
-        try:
-            # wait for the process group to terminate
-            parent = psutil.Process(pid)
-            parent.wait(timeout=10)
-            logger.info(f"Process group {pid} terminated successfully.")
+        if args:
+            args = self._decode_exec_args(args)
+            print(args)
+            self._ser = serial.Serial(path, timeout=timeout, **args)
+        else:
+            self._ser = serial.Serial(path, timeout=timeout)
 
-        except psutil.TimeoutExpired:
-            logger.warning(
-                f"Timeout: Process group {pid}"
-                "did not terminate within 5 seconds."
-            )
-            # force termination
-            os.killpg(pid, signal.SIGKILL)
-            logger.info(f"Sent SIGKILL to process group {pid}")
-
-    @property
-    def prompt(self) -> bytes:
-        """Return target device prompt."""
-        return self._dev.prompt
-
-    @property
-    def no_cmd(self) -> str:
-        """Return command not found string."""
-        return self._dev.no_cmd
-
-    def host_open(self, cmd: List[str], uptime: int = 0) -> pexpect.spawn:
-        """Open host-based target device."""
-        if self._child:
-            raise IOError("Host device already open")
-
-        self._child = None
-        self._crash.clear()
-        self._busy_loop.clear()
-
-        # we need command to reopen file in the case of crash
-        self._cmd = cmd
-
-        logger.info("spawn cmd: {}".format("".join(cmd)))
-        print("spawn cmd: {}".format("".join(cmd)))
-        self._child = pexpect.spawn(
-            "".join(cmd), timeout=10, maxread=20000, cwd=self._cwd
-        )
-
-        time.sleep(uptime)
+        # reboot device if possible
+        self.reboot()
 
         ret = self._wait_for_boot()
         if ret is False:
             raise TimeoutError("device boot timeout")
 
-        return self._child
-
-    def host_close(self) -> None:
-        """Close host-based target device."""
-        if not self._child:
-            raise IOError("Host device not ready")
-
-        if self._child.isalive():
-            # send power off
-            self.poweroff()
-            time.sleep(1)
-
-        if self._child.isalive():
-            # kill process group
-            self._kill_process_group(self._child)
-
-        self._child = None
-
-        logger.info("host device closed")
-
     def send_command(self, cmd: bytes | str, timeout: int = 1) -> bytes:
-        """Send command to the host device and get the response."""
-        if not self._child:
-            raise IOError("Host device not ready")
+        """Send command to the serial device and get the response."""
+        if not self._ser:
+            raise IOError("Serial device not ready")
 
         # convert string to bytes
         if not isinstance(cmd, bytes):
             cmd = cmd.encode("utf-8")
-
-        # update timeout for pexpect
-        self._child.timeout = timeout
 
         # read any pending output and drop
         _ = self._read_all(timeout=0)
@@ -326,18 +273,7 @@ class DeviceHost(DeviceCommon):
     def send_cmd_read_until_pattern(
         self, cmd: bytes, pattern: bytes, timeout: int
     ) -> CmdReturn:
-        """Send command to device and read until the specified pattern.
-
-        :param cmd: (bytes) command to send to device
-        :param pattern: (bytes, or list of (bytes), optional)
-         String or regex pattern to look for. If a list,
-         patterns will be concatenated with '.*'.
-         The pattern will be converted to bytes for matching.
-         Default is None.
-        :param timeout: (int) timeout value in seconds
-
-        :return: CmdReturn : command return data
-        """
+        """Send command to device and read until the specified pattern."""
         if not isinstance(cmd, bytes):
             raise TypeError("Command must by bytes")
 
@@ -345,7 +281,7 @@ class DeviceHost(DeviceCommon):
             raise TypeError("Pattern must by bytes")
 
         # clear buffer for reading data after command
-        self._readline()
+        _ = self._read_all()
 
         output = self.send_command(cmd, 0)
         end_time = time.time() + timeout
@@ -380,8 +316,8 @@ class DeviceHost(DeviceCommon):
 
     def send_ctrl_cmd(self, ctrl_char: str) -> CmdStatus:
         """Send control command to the device."""
-        if not self._child:
-            raise IOError("Host device is not open")
+        if not self._ser:
+            raise IOError("Serial device is not open")
 
         self._write_ctrl(ctrl_char)
 
@@ -392,7 +328,17 @@ class DeviceHost(DeviceCommon):
     @property
     def name(self) -> str:
         """Get device name."""
-        return "host_unknown"
+        return "serial"
+
+    @property
+    def prompt(self) -> bytes:
+        """Return target device prompt."""
+        return self._dev.prompt
+
+    @property
+    def no_cmd(self) -> str:
+        """Return command not found string."""
+        return self._dev.no_cmd
 
     @property
     def busyloop(self) -> bool:
@@ -407,19 +353,19 @@ class DeviceHost(DeviceCommon):
     @property
     def notalive(self) -> bool:
         """Check if the device is dead."""
-        if not self._child:
+        if not self._ser:
             return True
-        return not self._child.isalive()
+        return False
 
     def poweroff(self) -> None:
         """Poweroff the device."""
-        self.send_command(self._dev.poweroff_cmd)
+        print("TODO: poweroff")
 
-    def reboot(self, timeout: int) -> bool:
+    def reboot(self, timeout: int = 1) -> bool:
         """Reboot the device."""
-        return True if self._dev_reopen() else False
+        print("TODO: reboot")
 
-    def start_log_collect(self, logs: Dict[str, Any]) -> None:
+    def start_log_collect(self, logs: dict[str, Any]) -> None:
         """Start device log collector."""
         self._logs = logs
 

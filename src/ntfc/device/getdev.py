@@ -23,6 +23,7 @@
 from typing import TYPE_CHECKING
 
 from .qemu import DeviceQemu
+from .serial import DeviceSerial
 from .sim import DeviceSim
 
 if TYPE_CHECKING:
@@ -48,6 +49,8 @@ def get_device(conf: "ProductConfig", cpu: int = 0) -> "DeviceCommon":
         device = DeviceSim(conf)
     elif devname == "qemu":
         device = DeviceQemu(conf)
+    elif devname == "serial":
+        device = DeviceSerial(conf)
     else:
         raise ValueError("unsupported device")
 
