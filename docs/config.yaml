@@ -16,6 +16,7 @@ product:                          # many products can be supported in tests (pro
                                   # Empty for simulator.
       conf_path: ''               # configuration path for this core firmware
       elf_path: ''                # NuttX ELF path for this core firmware
+      reboot: ''                  # System command to reset DUT, eg 'st-flash reset'
 
     core1:                        # Aux core 1 (for AMP test cases)
       name: ''

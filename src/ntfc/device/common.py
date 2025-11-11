@@ -21,6 +21,7 @@
 """Device common interface."""
 
 import re
+import subprocess
 import time
 from abc import ABC, abstractmethod
 from dataclasses import astuple, dataclass
@@ -268,6 +269,16 @@ class DeviceCommon(ABC):
     def stop_log_collect(self) -> None:
         """Stop device log collector."""
         self._logs = None
+
+    def _system_cmd(self, cmd: str) -> None:
+        logger.info("system command:", cmd)
+        subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
 
     @property
     def prompt(self) -> bytes:

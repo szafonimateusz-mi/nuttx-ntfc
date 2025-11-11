@@ -166,4 +166,7 @@ class DeviceSerial(DeviceCommon):
 
     def reboot(self, timeout: int = 1) -> bool:
         """Reboot the device."""
-        print("TODO: reboot")
+        if "reboot" in self._conf.core():
+            logger.info("reboot device")
+            cmd = self._conf.core()["reboot"]
+            self._system_cmd(cmd)
