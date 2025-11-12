@@ -170,3 +170,10 @@ class DeviceSerial(DeviceCommon):
             logger.info("reboot device")
             cmd = self._conf.core()["reboot"]
             self._system_cmd(cmd)
+
+            # clear fautl flags
+            self._crash.clear()
+            self._busy_loop.clear()
+
+            return True
+        return False

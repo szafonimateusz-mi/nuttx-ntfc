@@ -160,7 +160,6 @@ class _PytestConfigPlugin:
         if (
             pytest.product.busyloop
             or pytest.product.crash
-            or pytest.product.crash
             or pytest.product.notalive
         ):
             if call.when in ("setup", "call") or (
