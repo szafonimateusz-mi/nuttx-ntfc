@@ -25,7 +25,8 @@ Quick start
 5. Configure and build NuttX in ``external/nuttx``.
 
    A sample configuration for ``SIMULATOR``, QEMU targets can
-   be found at ``docs/boards``.
+   be found at ``docs/boards``. There is also a configuration for ``nucleo-h743zi``
+   that demonstrating the use of the serial port to communicate with the DTU.
 
    For ``SIMULATOR``::
 
@@ -76,6 +77,14 @@ Quick start
      make -j
      cd ../..
 
+   For ``NUCLEO-H743ZI``::
+
+     mkdir boards/arm/stm32h7/nucleo-h743zi/configs/ntfc
+     cp ../../docs/boards/nucleo-h743zi/defconfig boards/arm/stm32h7/nucleo-h743zi/configs/ntfc
+     ./tools/configure.sh nucleo-h743zi/ntfc
+     make -j
+     cd ../..
+
 6. Collect test cases without running tests.
 
    For ``SIMULATOR``::
@@ -101,6 +110,10 @@ Quick start
    For ``QEMU-RISCV64``::
 
      python -m ntfc --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml collect
+
+   For ``NUCLEO-H743ZI``::
+
+     python -m ntfc --confpath config/nuttx-qemu-serial-stlink.yaml collect
 
    When you run NTFC with ``--debug`` option, tests that were detected but
    the conditions for running them are not met will also be listed.
@@ -130,3 +143,7 @@ Quick start
    For ``QEMU-RISCV64``::
 
      python -m ntfc --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml test
+
+   For ``NUCLEO-H743ZI``::
+
+     python -m ntfc --confpath config/nuttx-qemu-serial-stlink.yaml test
