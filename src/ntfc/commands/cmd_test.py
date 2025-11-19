@@ -24,6 +24,7 @@ import importlib.util
 
 import click
 
+from ntfc.cli.clitypes import cli_testenv_options
 from ntfc.cli.environment import Environment, pass_environment
 
 HAS_PYTEST_HTML = importlib.util.find_spec("pytest_html") is not None
@@ -46,10 +47,35 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     default="./result",
     help="Where to store the test results. Default: ./result",
 )
+@click.option(
+    "--nologs",
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "--exitonfail/--no-exitonfail",
+    default=False,
+    is_flag=True,
+)
+@cli_testenv_options
 @pass_environment
-def cmd_test(ctx: Environment, **kwargs) -> bool:
+def cmd_test(
+    ctx: Environment,
+    testpath: str,
+    confpath: str,
+    ignorefile: str,
+    nologs: bool,
+    exitonfail: bool,
+    **kwargs,
+) -> bool:
     """Run tests."""
     ctx.runtest = True
+    ctx.testpath = testpath
+    ctx.confpath = confpath
+    ctx.ignorefile = ignorefile
+    ctx.nologs = nologs
+    ctx.exitonfail = exitonfail
+
     ctx.result = {}
     ctx.result["resdir"] = kwargs.get("resdir")
     ctx.result["html"] = kwargs.get("html")

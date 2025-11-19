@@ -37,34 +37,6 @@ from ntfc.plugins_loader import commands_list
 
 @click.group()
 @click.option(
-    "--testpath",
-    type=click.Path(resolve_path=False),
-    default="./external/nuttx-testing",
-    help="Path to test cases. Can be also set with environment"
-    " variable NTFC_TESTPATH. Default: ./external/nuttx-testing",
-    envvar="NTFC_TESTPATH",
-)
-@click.option(
-    "--confpath",
-    type=click.Path(resolve_path=False),
-    default="./external/config.yaml",
-    help="Path to test configuration file. Can be also set with environment"
-    "variable NTFC_CONFPATH. Default: ./external/config.yaml",
-    envvar="NTFC_CONFPATH",
-)
-@click.option(
-    "--ignorefile",
-    type=click.Path(resolve_path=False),
-    default="./external/ignore.txt",
-    help="Path to file with test ignore rules."
-    "Default: ./external/ignore.txt",
-)
-@click.option(
-    "--nologs",
-    default=False,
-    is_flag=True,
-)
-@click.option(
     "--debug/--no-debug",
     default=False,
     is_flag=True,
@@ -74,30 +46,11 @@ from ntfc.plugins_loader import commands_list
     default=False,
     is_flag=True,
 )
-@click.option(
-    "--exitonfail/--no-exitonfail",
-    default=False,
-    is_flag=True,
-)
 @pass_environment
-def main(
-    ctx: Environment,
-    testpath: str,
-    confpath: str,
-    ignorefile: str,
-    debug: bool,
-    verbose: bool,
-    exitonfail: bool,
-    nologs: bool,
-) -> bool:
+def main(ctx: Environment, debug: bool, verbose: bool) -> bool:
     """VFTC - NuttX Testing Framework for Community."""
-    ctx.testpath = testpath
-    ctx.confpath = confpath
-    ctx.ignorefile = ignorefile
     ctx.debug = debug
     ctx.verbose = verbose
-    ctx.exitonfail = exitonfail
-    ctx.nologs = nologs
 
     if debug:  # pragma: no cover
         logger.setLevel("DEBUG")

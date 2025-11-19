@@ -89,31 +89,31 @@ Quick start
 
    For ``SIMULATOR``::
 
-     python -m ntfc --confpath config/nuttx-sim.yaml collect
+     python -m ntfc collect --confpath config/nuttx-sim.yaml
 
    For ``QEMU-X86_64``::
 
-     python -m ntfc --confpath config/nuttx-qemu-x86_64.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-x86_64.yaml
 
    For ``QEMU-ARMV7A``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv7a.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-armv7a.yaml
 
    For ``QEMU-ARMV7R``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv7r.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-armv7r.yaml
 
    For ``QEMU-ARMV8A``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv8a.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-armv8a.yaml
 
    For ``QEMU-RISCV64``::
 
-     python -m ntfc --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml
 
    For ``NUCLEO-H743ZI``::
 
-     python -m ntfc --confpath config/nuttx-qemu-serial-stlink.yaml collect
+     python -m ntfc collect --confpath config/nuttx-qemu-serial-stlink.yaml
 
    When you run NTFC with ``--debug`` option, tests that were detected but
    the conditions for running them are not met will also be listed.
@@ -122,28 +122,28 @@ Quick start
 
    For ``SIMULATOR``::
 
-     python -m ntfc --confpath config/nuttx-sim.yaml test
+     python -m ntfc test --confpath config/nuttx-sim.yaml
 
    For ``QEMU-X86_64``::
 
-     python -m ntfc --confpath config/nuttx-qemu-x86_64.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-x86_64.yaml
 
    For ``QEMU-ARMV7A``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv7a.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-armv7a.yaml
 
    For ``QEMU-ARMV7R``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv7r.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-armv7r.yaml
 
    For ``QEMU-ARMV8A``::
 
-     python -m ntfc --confpath config/nuttx-qemu-armv8a.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-armv8a.yaml
 
    For ``QEMU-RISCV64``::
 
-     python -m ntfc --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-riscv-rv-virt-64.yaml
 
    For ``NUCLEO-H743ZI``::
 
-     python -m ntfc --confpath config/nuttx-qemu-serial-stlink.yaml test
+     python -m ntfc test --confpath config/nuttx-qemu-serial-stlink.yaml

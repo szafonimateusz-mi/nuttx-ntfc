@@ -22,6 +22,7 @@
 
 import click
 
+from ntfc.cli.clitypes import cli_testenv_options
 from ntfc.cli.environment import Environment, pass_environment
 
 ###############################################################################
@@ -30,9 +31,15 @@ from ntfc.cli.environment import Environment, pass_environment
 
 
 @click.command(name="collect")
+@cli_testenv_options
 @pass_environment
-def cmd_collect(ctx: Environment) -> bool:
+def cmd_collect(
+    ctx: Environment, testpath: str, confpath: str, ignorefile: str
+) -> bool:
     """Collect test cases."""
     ctx.runcollect = True
+    ctx.testpath = testpath
+    ctx.confpath = confpath
+    ctx.ignorefile = ignorefile
 
     return True

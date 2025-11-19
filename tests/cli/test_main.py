@@ -48,9 +48,9 @@ def test_main(runner):
 
 def test_main_collect(runner):
     args = [
-        "--confpath=./tests/resources/nuttx/sim/config.yaml",
-        "--testpath=./tests/resources/test_collect",
         "collect",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
     ]
     result = runner.invoke(main, args)
     assert result.exit_code == 0
@@ -58,9 +58,9 @@ def test_main_collect(runner):
     args = [
         "--debug",
         "--verbose",
-        "--confpath=./tests/resources/nuttx/sim/config.yaml",
-        "--testpath=./tests/resources/test_collect",
         "collect",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
     ]
     result = runner.invoke(main, args)
     assert result.exit_code == 0
@@ -68,9 +68,9 @@ def test_main_collect(runner):
 
 def test_main_test(runner):
     args = [
-        "--confpath=./tests/resources/nuttx/sim/config.yaml",
-        "--testpath=./tests/resources/test_collect",
         "test",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
     ]
     result = runner.invoke(main, args)
     assert result.exit_code == 0
@@ -78,9 +78,9 @@ def test_main_test(runner):
     args = [
         "--debug",
         "--verbose",
-        "--confpath=./tests/resources/nuttx/sim/config.yaml",
-        "--testpath=./tests/resources/test_collect",
         "collect",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
     ]
     result = runner.invoke(main, args)
     assert result.exit_code == 0
