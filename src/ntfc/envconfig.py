@@ -26,6 +26,7 @@ from typing import Dict, List, Union
 import yaml
 
 from ntfc.lib.elf.elf_parser import ElfParser
+from ntfc.logger import logger
 
 
 class ProductConfig:
@@ -161,8 +162,13 @@ class EnvConfig:
 
     def _load_config(self, yaml_path: str) -> None:
         """Load configuration."""
-        with open(yaml_path, "r") as f:
-            self._cfg_values = yaml.safe_load(f)
+        try:
+            with open(yaml_path, "r") as f:
+                self._cfg_values = yaml.safe_load(f)
+
+        except FileNotFoundError:
+            logger.error(f"ERROR: Configuration file not found: {yaml_path}")
+            exit(1)
 
     def _print_config(self) -> None:
         """Print device configuration."""
