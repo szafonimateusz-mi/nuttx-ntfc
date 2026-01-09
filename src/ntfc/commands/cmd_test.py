@@ -21,7 +21,7 @@
 """Module containing NTFC test command."""
 
 import importlib.util
-from typing import Any
+from typing import Any, Tuple
 
 import click
 
@@ -37,8 +37,41 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
 
 
 @click.command(name="test")
-@pass_environment
 @cli_testenv_options
+@pass_environment
+@click.option(
+    "-c",
+    "--modules",
+    type=str,
+    help='Execute specific test module(s). Use quotes for multiple: -c "module1 module2" or -c module1,module2',
+)
+@click.option(
+    "-i",
+    "--index",
+    "select_individual_tests",
+    multiple=True,
+    type=int,
+    help="Select and execute individual tests by index. Use with -l to see indexes.",
+)
+@click.option(
+    "--loops",
+    type=int,
+    default=1,
+    help="Number of times to run each test case. Default: 1.",
+)
+@click.option(
+    "-l",
+    "--list-tests",
+    is_flag=True,
+    default=False,
+    help="List all available test cases with their indexes.",
+)
+@click.option(
+    "--list-modules",
+    is_flag=True,
+    default=False,
+    help="List all available test modules.",
+)
 @click.option(
     "--flash",
     is_flag=True,
@@ -74,6 +107,7 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
 )
 def cmd_test(
     ctx: Environment,
+    /,  # noqa: ARG001
     testpath: str,
     confpath: str,
     rebuild: bool,
@@ -81,6 +115,11 @@ def cmd_test(
     jsonconf: str,
     nologs: bool,
     exitonfail: bool,
+    modules: str,
+    select_individual_tests: Tuple[int, ...],
+    loops: int,
+    list_tests: bool,
+    list_modules: bool,
     **kwargs: Any,
 ) -> bool:
     """Run tests."""
@@ -92,6 +131,17 @@ def cmd_test(
     ctx.jsonconf = jsonconf
     ctx.nologs = nologs
     ctx.exitonfail = exitonfail
+    ctx.modules = None
+    if modules:
+        module_list = modules.replace(",", " ").split()
+        ctx.modules = module_list if module_list else None
+
+    ctx.select_individual_tests = (
+        list(select_individual_tests) if select_individual_tests else None
+    )
+    ctx.loops = loops
+    ctx.list_tests = list_tests
+    ctx.list_modules = list_modules
 
     ctx.result = {}
     ctx.result["resdir"] = kwargs.get("resdir")

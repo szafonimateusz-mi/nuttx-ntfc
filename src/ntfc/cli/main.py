@@ -23,7 +23,7 @@
 import json
 import pprint
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import click
 import yaml  # type: ignore
@@ -32,7 +32,10 @@ from ntfc.builder import NuttXBuilder
 from ntfc.cli.environment import Environment, pass_environment
 from ntfc.logger import logger
 from ntfc.plugins_loader import commands_list
+from ntfc.pytest.collector import *
+from ntfc.pytest.formatters import *
 from ntfc.pytest.mypytest import MyPytest
+from ntfc.pytest.runner import *
 
 ###############################################################################
 # Function: main
@@ -71,58 +74,6 @@ def main(ctx: Environment, debug: bool, verbose: bool) -> bool:
     return True
 
 
-def collect_print_skipped(items: List[Tuple[Any, str]]) -> None:
-    """Print skipped tests and reason."""
-    if items:
-        print("Skipped tests:")
-    for item in items:
-        print(f"{item[0].location[0]}:{item[0].location[2]}: \n => {item[1]}")
-
-
-def collect_print_modules(modules: List[str]) -> None:
-    """Print collected modules."""
-    print("Modules:")
-    for m in modules:
-        print(m)
-
-
-def collect_run(pt: MyPytest, ctx: Environment) -> None:
-    """Collect tests."""
-    assert ctx.testpath is not None
-    col = pt.collect(ctx.testpath)
-
-    print("\nCollect summary:")
-    print(
-        f"  all: {len(col.allitems)}"
-        f"  filtered: {len(col.items)}"
-        f"  skipped: {len(col.skipped)}"
-    )
-
-    if ctx.collect == "silent":
-        return
-
-    if ctx.collect in ("collected", "all"):
-        print()
-        print("Collected items:")
-        # print parsed test cases
-        for item in col.items:
-            print(item)
-
-    if ctx.collect in ("skipped", "all"):
-        # print skipped test cases
-        collect_print_skipped(col.skipped)
-
-    if ctx.collect in ("modules", "all"):
-        collect_print_modules(col.modules)
-
-
-def test_run(pt: MyPytest, ctx: Environment) -> Any:
-    """Run tests."""
-    assert ctx.testpath is not None
-    assert ctx.result is not None
-    return pt.runner(ctx.testpath, ctx.result, ctx.nologs)
-
-
 def print_yaml_config(config: Dict[str, Any]) -> None:
     """Print YAML configuration."""
     print("YAML config:")
@@ -150,6 +101,8 @@ def cli_on_close(ctx: Environment) -> bool:
     with open(ctx.confpath, "r", encoding="utf-8") as f:
         conf = yaml.safe_load(f)
 
+    conf["config"]["loops"] = ctx.loops
+
     conf_json = {}
     if ctx.jsonconf:  # pragma: no cover
         logger.info(f"Module config file {ctx.jsonconf}")
@@ -173,6 +126,21 @@ def cli_on_close(ctx: Environment) -> bool:
         return True
 
     pt = MyPytest(conf, ctx.exitonfail, ctx.verbose, conf_json)
+
+    # Handle --list-modules option
+    if ctx.list_modules:
+        list_modules_run(pt, ctx)
+        return True
+
+    # Handle --list-tests or -l option
+    if ctx.list_tests:
+        list_tests_run(pt, ctx)
+        return True
+
+    # Handle --index/-i option (select and run individual tests)
+    if ctx.select_individual_tests:
+        select_tests_run(pt, ctx)
+        return True
 
     if ctx.runcollect:
         collect_run(pt, ctx)

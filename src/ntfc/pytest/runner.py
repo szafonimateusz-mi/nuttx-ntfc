@@ -21,9 +21,14 @@
 """NTFC runner plugin for pytest."""
 
 import os
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 import pytest
+
+from ntfc.logger import logger
+
+if TYPE_CHECKING:
+    from ntfc.pytest.mypytest import MyPytest
 
 ###############################################################################
 # Class: RunnerPlugin
@@ -100,3 +105,98 @@ class RunnerPlugin:
     @pytest.fixture  # type: ignore
     def core(self) -> None:
         """Get active core."""
+
+
+###############################################################################
+# Test Run Functions
+###############################################################################
+
+
+def test_run(pt: "MyPytest", ctx: Any) -> Any:
+    """Run tests."""
+    assert ctx.testpath is not None
+    assert ctx.result is not None
+
+    # Initialize pytest and apply module filter before running tests
+    pt._init_pytest(ctx.testpath)
+
+    # Apply module filter if specified
+    if ctx.modules:
+        if not hasattr(pytest, "cfgtest"):
+            pytest.cfgtest = {}
+        if "module" not in pytest.cfgtest:
+            pytest.cfgtest["module"] = {}
+        pytest.cfgtest["module"]["include_module"] = ctx.modules
+        logger.info(f"Running tests from modules: {ctx.modules}")
+
+    # Run tests without re-initializing (to preserve module filter)
+    return pt.runner(
+        ctx.testpath,
+        ctx.result if isinstance(ctx.result, dict) else {},
+        ctx.nologs,
+        None,
+        ctx.loops,
+        reinit=False,
+    )
+
+
+def select_tests_run(pt: "MyPytest", ctx: Any) -> None:
+    """Select and run individual tests by index."""
+    assert ctx.testpath is not None
+    assert ctx.select_individual_tests is not None
+
+    # First collect to get test list
+    col = pt.collect(ctx.testpath)
+
+    # Validate indexes
+    invalid_indexes = [
+        i for i in ctx.select_individual_tests if i < 1 or i > len(col.items)
+    ]
+    if invalid_indexes:
+        logger.error(f"❌ Invalid test indexes: {invalid_indexes}")
+        logger.error(f"❌ Valid range: 1-{len(col.items)}")
+        return
+
+    # Get selected tests
+    selected_tests = [col.items[i - 1] for i in ctx.select_individual_tests]
+
+    # Display selected tests
+    print("\n" + "=" * 100)
+    print(f"  🚀 RUNNING {len(selected_tests)} SELECTED TEST(S)")
+    if ctx.loops > 1:
+        print(f"  🔄 Loops: {ctx.loops}")
+    print("=" * 100)
+
+    # Create table for selected tests
+    from prettytable import PrettyTable
+
+    table = PrettyTable()
+    table.field_names = ["Idx", "Module", "Test Case"]
+    table.align["Idx"] = "r"
+    table.align["Module"] = "l"
+    table.align["Test Case"] = "l"
+    table.max_width["Module"] = 40
+    table.max_width["Test Case"] = 50
+
+    # Custom border style
+    table.horizontal_char = "─"
+    table.vertical_char = "│"
+    table.junction_char = "┼"
+
+    for idx, test in zip(ctx.select_individual_tests, selected_tests):
+        table.add_row([idx, test.module2, test.name])
+
+    print(table)
+    print("=" * 100 + "\n")
+
+    # Convert selected tests to pytest node IDs
+    selected_nodeids = [item.nodeid for item in selected_tests]
+
+    # Update test collection to only run selected tests
+    pt.runner(
+        ctx.testpath,
+        ctx.result if isinstance(ctx.result, dict) else {},
+        ctx.nologs,
+        selected_tests=selected_nodeids,
+        loops=ctx.loops,
+    )

@@ -21,7 +21,7 @@
 """NTFC collector plugin for pytest."""
 
 import os
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Any, List, Tuple
 
 import pytest
 
@@ -30,6 +30,7 @@ from ntfc.testfilter import FilterTest
 
 if TYPE_CHECKING:
     from ntfc.envconfig import EnvConfig
+    from ntfc.pytest.mypytest import MyPytest
 
 ###############################################################################
 # Class: CollectorPlugin
@@ -176,3 +177,53 @@ class CollectorPlugin:
 
         # overwrite items
         items[:] = tmp
+
+
+###############################################################################
+# Collect Run Functions
+###############################################################################
+
+
+def collect_print_skipped(items: List[Tuple[Any, str]]) -> None:
+    """Print skipped tests and reason."""
+    if items:
+        print("Skipped tests:")
+    for item in items:
+        print(f"{item[0].location[0]}:{item[0].location[2]}: \n => {item[1]}")
+
+
+def collect_print_modules(modules: List[str]) -> None:
+    """Print collected modules."""
+    print("Modules:")
+    for m in modules:
+        print(m)
+
+
+def collect_run(pt: "MyPytest", ctx: Any) -> None:
+    """Collect tests."""
+    assert ctx.testpath is not None
+    col = pt.collect(ctx.testpath)
+
+    print("\nCollect summary:")
+    print(
+        f"  all: {len(col.allitems)}"
+        f"  filtered: {len(col.items)}"
+        f"  skipped: {len(col.skipped)}"
+    )
+
+    if ctx.collect == "silent":
+        return
+
+    if ctx.collect in ("collected", "all"):
+        print()
+        print("Collected items:")
+        # print parsed test cases
+        for item in col.items:
+            print(item)
+
+    if ctx.collect in ("skipped", "all"):
+        # print skipped test cases
+        collect_print_skipped(col.skipped)
+
+    if ctx.collect in ("modules", "all"):
+        collect_print_modules(col.modules)

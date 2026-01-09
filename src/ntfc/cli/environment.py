@@ -21,7 +21,7 @@
 """Module containing the Click environment."""
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import click
 
@@ -56,6 +56,12 @@ class DEnvironmentData:
     testpath: Optional[str] = None
     confpath: Optional[str] = None
     jsonconf: Optional[str] = None
+
+    modules: Optional[List[str]] = None
+    select_individual_tests: Optional[List[int]] = None
+    loops: int = 1
+    list_tests: bool = False
+    list_modules: bool = False
 
 
 ###############################################################################

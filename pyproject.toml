@@ -41,6 +41,7 @@ dependencies = [
          "pytest-ordering",
          "requests",
          "pillow", # optional for graphic?
+         "prettytable",
          "pytz", # optional for time zone tests
 ]
 classifiers = [

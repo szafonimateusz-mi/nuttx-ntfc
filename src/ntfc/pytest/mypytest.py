@@ -224,15 +224,26 @@ class MyPytest:
             product.init()
 
     def runner(
-        self, testpath: str, result: Dict[str, Any], nologs: bool = False
+        self,
+        testpath: str,
+        result: Dict[str, Any],
+        nologs: bool = False,
+        selected_tests: Optional[List[str]] = None,
+        loops: int = 1,
+        reinit: bool = True,
     ) -> Any:
         """Run tests.
 
         :param testpath: path to test directory
         :param result: result output configuration
+        :param nologs: disable log collection
+        :param selected_tests: list of test node IDs to run
+        :param loops: number of times to run each test
+        :param reinit: re-initialize pytest environment (default: True)
         """
-        # initialzie pytest env
-        self._init_pytest(testpath)
+        # initialize pytest env (if needed)
+        if reinit:
+            self._init_pytest(testpath)
 
         opt = [testpath]
 
@@ -241,6 +252,15 @@ class MyPytest:
         timeout_session = self._config.common.get("timeout_session", 3600)
         opt.append("--timeout=" + str(timeout))
         opt.append("--session-timeout=" + str(timeout_session))
+
+        # Configure loops (count)
+        if loops > 1:
+            opt.append(f"--count={loops}")
+
+        # Filter to selected tests if specified
+        if selected_tests:
+            for nodeid in selected_tests:
+                opt.append(nodeid)
 
         if not nologs:  # pragma: no cover
             # create result directory
@@ -271,13 +291,15 @@ class MyPytest:
 
         return self._run(opt, [runner, collector])
 
-    def collect(self, testpath: str) -> "Collected":
+    def collect(self, testpath: str, reinit: bool = True) -> "Collected":
         """Collect tests.
 
-        :param testpath:
+        :param testpath: path to tests
+        :param reinit: re-initialize pytest environment (default: True)
         """
-        # initialzie pytest env
-        self._init_pytest(testpath)
+        # initialize pytest env (if needed)
+        if reinit:
+            self._init_pytest(testpath)
 
         # collector plugin
         collector = CollectorPlugin(self._config, True)
