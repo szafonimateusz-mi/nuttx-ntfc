@@ -1,0 +1,12 @@
+config:
+  cwd: './'
+
+product:
+
+  name: "product"
+  cores:
+    core0:
+      name: 'main'
+      device: 'sim'
+      conf_path: './tests/resources/nuttx/sim/kv_config'
+      elf_path: './tests/resources/nuttx/sim/nuttx'

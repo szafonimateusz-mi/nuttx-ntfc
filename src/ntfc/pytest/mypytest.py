@@ -60,12 +60,15 @@ class MyPytest:
         exit_on_fail: bool = False,
         verbose: bool = False,
         confjson: Optional[Dict[str, Any]] = None,
+        modules: Optional[List[str]] = None,
     ) -> None:
         """Initialize pytest wrapper.
 
         :param config: configuration instance
         :param exit_on_fail: exit on first test fail if set to True
         :param verbose: verbose output if set to True
+        :param confjson: test session configuration
+        :param modules: module filetr
         """
         self._config = EnvConfig(config)
         self._opt: List[str] = []
@@ -84,6 +87,13 @@ class MyPytest:
             self._cfg_test = confjson
         else:
             self._cfg_test = {}
+
+        # Overwrite module filter if specified
+        if modules:
+            if "module" not in self._cfg_test:  # pragma: no cover
+                self._cfg_test["module"] = {}
+            self._cfg_test["module"]["include_module"] = modules
+            logger.info(f"Running tests from modules: {modules}")
 
         pytest.cfgtest = self._cfg_test
 
@@ -229,8 +239,6 @@ class MyPytest:
         result: Dict[str, Any],
         nologs: bool = False,
         selected_tests: Optional[List[str]] = None,
-        loops: int = 1,
-        reinit: bool = True,
     ) -> Any:
         """Run tests.
 
@@ -238,14 +246,12 @@ class MyPytest:
         :param result: result output configuration
         :param nologs: disable log collection
         :param selected_tests: list of test node IDs to run
-        :param loops: number of times to run each test
         :param reinit: re-initialize pytest environment (default: True)
         """
-        # initialize pytest env (if needed)
-        if reinit:
-            self._init_pytest(testpath)
+        # initialize pytest env
+        self._init_pytest(testpath)
 
-        opt = [testpath]
+        opt = []
 
         # configure timeouts
         timeout = self._config.common.get("timeout", 800)
@@ -253,14 +259,12 @@ class MyPytest:
         opt.append("--timeout=" + str(timeout))
         opt.append("--session-timeout=" + str(timeout_session))
 
-        # Configure loops (count)
-        if loops > 1:
-            opt.append(f"--count={loops}")
-
         # Filter to selected tests if specified
-        if selected_tests:
+        if selected_tests:  # pragma: no cover
             for nodeid in selected_tests:
                 opt.append(nodeid)
+        else:
+            opt.append(testpath)
 
         if not nologs:  # pragma: no cover
             # create result directory
@@ -297,9 +301,8 @@ class MyPytest:
         :param testpath: path to tests
         :param reinit: re-initialize pytest environment (default: True)
         """
-        # initialize pytest env (if needed)
-        if reinit:
-            self._init_pytest(testpath)
+        # initialize pytest env
+        self._init_pytest(testpath)
 
         # collector plugin
         collector = CollectorPlugin(self._config, True)

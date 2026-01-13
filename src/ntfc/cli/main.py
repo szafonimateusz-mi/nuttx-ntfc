@@ -23,19 +23,18 @@
 import json
 import pprint
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 import click
 import yaml  # type: ignore
+from prettytable import PrettyTable
 
 from ntfc.builder import NuttXBuilder
 from ntfc.cli.environment import Environment, pass_environment
 from ntfc.logger import logger
 from ntfc.plugins_loader import commands_list
-from ntfc.pytest.collector import *
-from ntfc.pytest.formatters import *
+from ntfc.pytest.formatters import list_modules_run, list_tests_run
 from ntfc.pytest.mypytest import MyPytest
-from ntfc.pytest.runner import *
 
 ###############################################################################
 # Function: main
@@ -88,14 +87,116 @@ def print_json_config(config: Dict[str, Any]) -> None:
     pp.pprint(config)
 
 
-@pass_environment
-def cli_on_close(ctx: Environment) -> bool:
-    """Handle all work on Click close."""
-    if ctx.helpnow:  # pragma: no cover
-        # do nothing if help was called
-        return True
+def collect_print_skipped(items: List[Tuple[Any, str]]) -> None:
+    """Print skipped tests and reason."""
+    if items:
+        print("Skipped tests:")
+    for item in items:
+        print(f"{item[0].location[0]}:{item[0].location[2]}: \n => {item[1]}")
 
-    conf = None
+
+def collect_run(pt: "MyPytest", ctx: Any) -> None:
+    """Collect tests."""
+    assert ctx.testpath is not None
+    col = pt.collect(ctx.testpath)
+
+    print("\nCollect summary:")
+    print(
+        f"  all: {len(col.allitems)}"
+        f"  filtered: {len(col.items)}"
+        f"  skipped: {len(col.skipped)}"
+    )
+
+    if ctx.collect == "silent":
+        return
+
+    # Handle --list-modules option or collect modules
+    if ctx.list_modules or ctx.collect in ("modules", "all"):
+        list_modules_run(col)
+
+    # Handle --list-tests or -l option
+    if ctx.list_tests or ctx.collect in ("collected", "all"):
+        list_tests_run(col)
+
+    if ctx.collect in ("skipped", "all"):
+        # print skipped test cases
+        collect_print_skipped(col.skipped)
+
+
+def tests_run(pt: "MyPytest", ctx: Any) -> Any:
+    """Select and run individual tests by index."""
+    assert ctx.testpath is not None
+
+    # First collect to get test list
+    col = pt.collect(ctx.testpath)
+
+    if ctx.select_individual_tests:
+        # Validate indexes
+        invalid_indexes = [
+            i
+            for i in ctx.select_individual_tests
+            if i < 1 or i > len(col.items)
+        ]
+        if invalid_indexes:
+            logger.error(f"❌ Invalid test indexes: {invalid_indexes}")
+            logger.error(f"❌ Valid range: 1-{len(col.items)}")
+            return -1
+
+        # Get selected tests
+        selected_tests = [
+            col.items[i - 1] for i in ctx.select_individual_tests
+        ]
+        test_range = ctx.select_individual_tests
+    else:
+        # Get all tests
+        selected_tests = col.items
+        test_range = range(1, len(col.items) + 1)
+
+    # Display selected tests
+    print("\n" + "=" * 100)
+    print(f"  🚀 RUNNING {len(selected_tests)} SELECTED TEST(S)")
+    if ctx.loops > 1:
+        print(f"  🔄 Loops: {ctx.loops}")
+    print("=" * 100)
+
+    # Create table for selected tests
+
+    table = PrettyTable()
+    table.field_names = ["Idx", "Module", "Test Case"]
+    table.align["Idx"] = "r"
+    table.align["Module"] = "l"
+    table.align["Test Case"] = "l"
+    table.max_width["Module"] = 40
+    table.max_width["Test Case"] = 50
+
+    # Custom border style
+    table.horizontal_char = "─"
+    table.vertical_char = "│"
+    table.junction_char = "┼"
+
+    for idx, test in zip(test_range, selected_tests):
+        table.add_row([idx, test.module2, test.name])
+
+    print(table)
+    print("=" * 100 + "\n")
+
+    # Convert selected tests to pytest node IDs
+    selected_nodeids = [item.nodeid for item in selected_tests]
+
+    # Update test collection to only run selected tests
+    return pt.runner(
+        ctx.testpath,
+        ctx.result,
+        ctx.nologs,
+        selected_tests=selected_nodeids,
+    )
+
+
+def load_config_files(
+    ctx: Environment,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Load configuration from config files."""
+    conf = {}
     logger.info(f"YAML config file {ctx.confpath}")
     assert ctx.confpath is not None
     with open(ctx.confpath, "r", encoding="utf-8") as f:
@@ -109,9 +210,11 @@ def cli_on_close(ctx: Environment) -> bool:
         with open(ctx.jsonconf, "r", encoding="utf-8") as f:
             conf_json = json.load(f)
 
-    print_yaml_config(conf)
-    print_json_config(conf_json)
+    if ctx.verbose:
+        print_yaml_config(conf)
+        print_json_config(conf_json)
 
+    # handle auto build feature
     builder = NuttXBuilder(conf, ctx.rebuild)
     if builder.need_build():
         builder.build_all()
@@ -121,32 +224,30 @@ def cli_on_close(ctx: Environment) -> bool:
         # update config
         conf = builder.new_conf()
 
+    return conf, conf_json
+
+
+@pass_environment
+def cli_on_close(ctx: Environment) -> bool:
+    """Handle all work on Click close."""
+    if ctx.helpnow:  # pragma: no cover
+        # do nothing if help was called
+        return True
+
+    # load configuration
+    conf, conf_json = load_config_files(ctx)
+
     # exit now when build only mode
     if ctx.runbuild:
         return True
 
-    pt = MyPytest(conf, ctx.exitonfail, ctx.verbose, conf_json)
-
-    # Handle --list-modules option
-    if ctx.list_modules:
-        list_modules_run(pt, ctx)
-        return True
-
-    # Handle --list-tests or -l option
-    if ctx.list_tests:
-        list_tests_run(pt, ctx)
-        return True
-
-    # Handle --index/-i option (select and run individual tests)
-    if ctx.select_individual_tests:
-        select_tests_run(pt, ctx)
-        return True
+    pt = MyPytest(conf, ctx.exitonfail, ctx.verbose, conf_json, ctx.modules)
 
     if ctx.runcollect:
         collect_run(pt, ctx)
 
     if ctx.runtest:
-        ret = test_run(pt, ctx)
+        ret = tests_run(pt, ctx)
         if ret != 0:
             exit(1)
 

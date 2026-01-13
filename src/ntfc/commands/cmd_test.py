@@ -43,7 +43,8 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     "-c",
     "--modules",
     type=str,
-    help='Execute specific test module(s). Use quotes for multiple: -c "module1 module2" or -c module1,module2',
+    help="Execute specific test module(s). "
+    'Use quotes for multiple: -c "module1 module2" or -c module1,module2',
 )
 @click.option(
     "-i",
@@ -51,7 +52,8 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     "select_individual_tests",
     multiple=True,
     type=int,
-    help="Select and execute individual tests by index. Use with -l to see indexes.",
+    help="Select and execute individual tests by index. "
+    "Use with -l to see indexes.",
 )
 @click.option(
     "--loops",
@@ -71,6 +73,12 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     is_flag=True,
     default=False,
     help="List all available test modules.",
+)
+@click.option(
+    "--collect-only",
+    is_flag=True,
+    default=False,
+    help="Collect tests without executing them.",
 )
 @click.option(
     "--flash",
@@ -120,6 +128,7 @@ def cmd_test(
     loops: int,
     list_tests: bool,
     list_modules: bool,
+    collect_only: bool,
     **kwargs: Any,
 ) -> bool:
     """Run tests."""
@@ -140,14 +149,21 @@ def cmd_test(
         list(select_individual_tests) if select_individual_tests else None
     )
     ctx.loops = loops
+
     ctx.list_tests = list_tests
     ctx.list_modules = list_modules
+    ctx.collect_only = collect_only
 
     ctx.result = {}
     ctx.result["resdir"] = kwargs.get("resdir")
     ctx.result["html"] = kwargs.get("html")
     ctx.result["json"] = kwargs.get("json")
     ctx.result["xml"] = kwargs.get("xml")
+
+    # handle some commands in collector-only mode
+    if ctx.list_tests or ctx.list_modules or ctx.collect_only:
+        ctx.runtest = False
+        ctx.runcollect = True
 
     return True
 

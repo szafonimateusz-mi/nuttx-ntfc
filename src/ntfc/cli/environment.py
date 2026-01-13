@@ -49,19 +49,19 @@ class DEnvironmentData:
     exitonfail: bool = False
     flash: bool = False
     nologs: bool = False
+    list_tests: bool = False
+    list_modules: bool = False
+    collect_only: bool = False
+    loops: int = 1
     collect: Optional[str] = None
     result: Optional[Any] = None
+    modules: Optional[List[str]] = None
+    select_individual_tests: Optional[List[int]] = None
 
     # files
     testpath: Optional[str] = None
     confpath: Optional[str] = None
     jsonconf: Optional[str] = None
-
-    modules: Optional[List[str]] = None
-    select_individual_tests: Optional[List[int]] = None
-    loops: int = 1
-    list_tests: bool = False
-    list_modules: bool = False
 
 
 ###############################################################################

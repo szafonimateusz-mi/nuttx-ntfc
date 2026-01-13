@@ -61,8 +61,11 @@ Run test cases.
 Test Filtering Options:
 
 * ``-c, --modules TEXT`` - Execute specific test module(s).
-  Use quotes for multiple modules: ``-c "module1 module2"`` or comma-separated: ``-c module1,module2``.
+  Use quotes for multiple modules: ``-c "module1 module2"`` or
+  comma-separated: ``-c module1,module2``.
   Example: ``-c "Nuttx_System_Arch_Nsh Nuttx_System_Arch_Example"``
+
+  This option overrides the configuration from the JSON session config.
 
 * ``-i, --index INTEGER`` - Select and execute individual tests by index.
   Use with ``-l`` to see available indexes. Can be specified multiple times.
@@ -70,14 +73,25 @@ Test Filtering Options:
 
 * ``--loops INTEGER`` - Number of times to run each test case.
   Default: 1.
-  Example: ``--loops 3`` will run each test 3 times
+  Example: ``--loops 3`` will run each test 3 times.
+
+  This option overrides the configuration from the YAML config.
+
+* ``--collect-only`` - Collect tests without executing them.
+  Useful for verifying test collection and filtering.
+
+  Equivalent to using ``python -m ntfc collect silent``.
 
 * ``-l, --list-tests`` - List all available test cases with their indexes.
   Displays test index, name, file location, and line number in a formatted table.
   Use with ``-c`` to filter by module.
 
+  Equivalent to using ``python -m ntfc collect collected``.
+
 * ``--list-modules`` - List all available test modules.
   Displays module name, number of tests, and directory in a formatted table.
+
+  Equivalent to using ``python -m ntfc collect modules``.
 
 Report Options:
 

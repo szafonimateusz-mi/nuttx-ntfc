@@ -31,3 +31,5 @@ def test_collector_collected_item():
     assert c.line == "e"
     assert c.nodeid == "f"
     assert c.module2 == "U_Aaa_Bbb"
+
+    print(c)

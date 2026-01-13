@@ -20,27 +20,21 @@
 
 """Pytest formatters for listing tests and modules."""
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
-import pytest
 from prettytable import PrettyTable
 
-from ntfc.logger import logger
-
 if TYPE_CHECKING:
-    from ntfc.pytest.mypytest import MyPytest
+    from ntfc.pytest.collected import Collected
 
 
 ###############################################################################
-# List Functions
+# Function: list_modules_run
 ###############################################################################
 
 
-def list_modules_run(pt: "MyPytest", ctx: Any) -> None:
+def list_modules_run(col: "Collected") -> None:
     """List all available test modules."""
-    assert ctx.testpath is not None
-    col = pt.collect(ctx.testpath)
-
     # Group tests by module
     modules: Dict[str, List[str]] = {}
     for item in col.allitems:
@@ -70,7 +64,7 @@ def list_modules_run(pt: "MyPytest", ctx: Any) -> None:
         )
         path = first_item.directory if first_item else "N/A"
         # Shorten path for better display
-        if "/nuttx-testing/" in path:
+        if "/nuttx-testing/" in path:  # pragma: no cover
             short_path = path.split("/nuttx-testing/")[1]
         else:
             short_path = path
@@ -86,26 +80,13 @@ def list_modules_run(pt: "MyPytest", ctx: Any) -> None:
     print("=" * 100 + "\n")
 
 
-def list_tests_run(pt: "MyPytest", ctx: Any) -> None:
+###############################################################################
+# Function: list_tests_run
+###############################################################################
+
+
+def list_tests_run(col: "Collected") -> None:
     """List all available tests with indexes."""
-    assert ctx.testpath is not None
-
-    # First initialize pytest to load ntfc.yaml
-    pt._init_pytest(ctx.testpath)
-
-    # Then apply module filter
-    if ctx.modules:
-        # Update pytest.cfgtest to filter by modules
-        if not hasattr(pytest, "cfgtest"):
-            pytest.cfgtest = {}
-        # Merge with existing cfgtest (if any)
-        if "module" not in pytest.cfgtest:
-            pytest.cfgtest["module"] = {}
-        pytest.cfgtest["module"]["include_module"] = ctx.modules
-
-    # Now collect tests without re-initializing
-    col = pt.collect(ctx.testpath, reinit=False)
-
     # Create table with elegant styling
     table = PrettyTable()
     table.field_names = ["Idx", "Module", "Test Case", "File"]
@@ -122,7 +103,7 @@ def list_tests_run(pt: "MyPytest", ctx: Any) -> None:
     # Set column widths
     table.max_width["Module"] = 35
     table.max_width["Test Case"] = 45
-    table.max_width["File"] = 25
+    table.max_width["File"] = 35
 
     # Add rows
     for idx, item in enumerate(col.items, 1):
@@ -139,7 +120,8 @@ def list_tests_run(pt: "MyPytest", ctx: Any) -> None:
     # Print summary with emoji
     if len(col.skipped) > 0:
         print(
-            f"💡 Summary: {len(col.items)} collected | {len(col.skipped)} skipped"
+            f"💡 Summary: {len(col.items)} "
+            f"collected | {len(col.skipped)} skipped"
         )
     else:
         print(f"💡 Summary: {len(col.items)} collected tests")
