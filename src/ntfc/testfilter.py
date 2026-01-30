@@ -104,6 +104,6 @@ class FilterTest:
         if not skip:
             logger.debug(f"OK: {cmd} {dep} {extra}")
         else:
-            logger.debug(f"SKIP: {cmd} {dep} {extra}")
+            logger.debug(f"SKIP: {cmd} {dep} {extra} {reason}")
 
         return skip, reason
