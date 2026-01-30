@@ -283,6 +283,8 @@ class MyPytest:
             if result.get("json"):
                 path = os.path.join(pytest.result_dir, "report.json")
                 opt.append(f"--json={path}")
+        else:
+            pytest.result_dir = ""
 
         # collector plugin
         collector = CollectorPlugin(self._config, False)

@@ -172,9 +172,7 @@ class PytestConfigPlugin:
 
         # Notify users if test failed
         if (
-            need_notify
-            and hasattr(pytest, "notify")
-            and hasattr(pytest, "result_dir")
+            need_notify and hasattr(pytest, "notify") and pytest.result_dir
         ):  # pragma: no cover
             logger.info(
                 f"Test {reason}, notifying developers for"
