@@ -1,0 +1,8 @@
+product:
+  platform: "smp"
+  cores:
+    core1:
+      name: "cpu1"
+      device: "sim"
+      conf_path: "./tests/resources/nuttx/sim/kv_config"
+      elf_path: "./tests/resources/nuttx/sim/nuttx"

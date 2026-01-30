@@ -1,0 +1,6 @@
+config:
+  debug: true
+  timeout: 60
+
+product:
+  platform: "smp"

@@ -21,8 +21,10 @@
 """Module containing the CLI logic for NTFC."""
 
 import json
+import os
 import pprint
 import sys
+from collections.abc import Mapping
 from typing import Any, Dict, List, Tuple
 
 import click
@@ -192,15 +194,74 @@ def tests_run(pt: "MyPytest", ctx: Any) -> Any:
     )
 
 
-def load_config_files(
+def update_nested_dict(
+    dict1: Dict[str, Any], dict2: Mapping[str, Any]
+) -> Dict[str, Any]:
+    """Recursively update nested dictionary.
+
+    Args:
+        dict1: Base dictionary to be updated
+        dict2: Dictionary to overlay on top of dict1
+
+    Returns:
+        Updated dictionary with dict2 merged into dict1
+    """
+    for k, v in dict2.items():
+        if isinstance(v, Mapping):
+            dict1[k] = update_nested_dict(dict1.get(k, {}), v)
+        else:
+            dict1[k] = v
+    return dict1
+
+
+def load_config_files(  # noqa: C901
     ctx: Environment,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Load configuration from config files."""
-    conf = {}
-    logger.info(f"YAML config file {ctx.confpath}")
+    """Load configuration from config files.
+
+    If confpath is a directory, load all YAML files in that directory
+    and merge them. If it's a file, load that single file.
+    """
+    conf: Dict[str, Any] = {}
     assert ctx.confpath is not None
-    with open(ctx.confpath, "r", encoding="utf-8") as f:
-        conf = yaml.safe_load(f)
+
+    # Check if confpath is a directory or file
+    if os.path.isdir(ctx.confpath):
+        # Directory mode: load all YAML files and merge them
+        logger.info(f"Loading YAML config directory: {ctx.confpath}")
+
+        yaml_files = []
+        for root, _dirs, files in os.walk(ctx.confpath):
+            for file in files:
+                if file.endswith((".yaml", ".yml")):
+                    yaml_files.append(os.path.join(root, file))
+
+        # Sort files for consistent merge order
+        yaml_files.sort()
+        logger.info(f"Found {len(yaml_files)} YAML files in directory")
+
+        # Load and merge all YAML files
+        for yaml_file in yaml_files:
+            logger.info(f"  Loading: {yaml_file}")
+            try:
+                with open(yaml_file, "r", encoding="utf-8") as f:
+                    file_conf = yaml.safe_load(f)
+                    conf = update_nested_dict(conf, file_conf)
+            except Exception as e:
+                logger.warning(
+                    f"  Skipping invalid YAML file: {yaml_file} ({e})"
+                )
+
+        if not conf:
+            raise IOError(
+                f"No valid configuration found in directory: {ctx.confpath}"
+            )
+
+    else:
+        # File mode: load single file
+        logger.info(f"Loading YAML config file: {ctx.confpath}")
+        with open(ctx.confpath, "r", encoding="utf-8") as f:
+            conf = yaml.safe_load(f)
 
     conf["config"]["loops"] = ctx.loops
 
