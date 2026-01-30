@@ -36,6 +36,7 @@ dependencies = [
          "pyserial",
          "pytest",
          "pytest-dependency",
+         "pytest-html",
          "pytest-repeat",
          "pytest-timeout",
          "pytest-ordering",

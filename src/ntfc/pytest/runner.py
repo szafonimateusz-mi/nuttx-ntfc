@@ -25,6 +25,8 @@ from typing import Any, Dict
 
 import pytest
 
+from ntfc.report import Reporter
+
 ###############################################################################
 # Class: RunnerPlugin
 ###############################################################################
@@ -100,3 +102,13 @@ class RunnerPlugin:
     @pytest.fixture  # type: ignore
     def core(self) -> None:
         """Get active core."""
+
+    def pytest_sessionfinish(self) -> None:
+        """Generate result summary after test session finishes.
+
+        This hook is called after all tests have completed.
+        It generates result_summary.txt and result_summary.html files.
+        """
+        if pytest.result_dir:
+            reporter = Reporter()
+            reporter.generate_result_summary(pytest.result_dir)

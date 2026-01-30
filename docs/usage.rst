@@ -95,8 +95,6 @@ Test Filtering Options:
 
 Report Options:
 
-* ``--xml`` - Store the XML report.
-
 * ``--resdir PATH`` - Where to store the test results.
   Default: ./result
 

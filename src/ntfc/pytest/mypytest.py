@@ -273,13 +273,13 @@ class MyPytest:
             pytest.result_dir = os.path.join(result_dir, time_now)
             os.makedirs(pytest.result_dir, exist_ok=True)
 
+            # always include HTML and XML report if logs enabled
+            path = os.path.join(pytest.result_dir, "report.html")
+            opt.append(f"--html={path}")
+            path = os.path.join(pytest.result_dir, "report.xml")
+            opt.append(f"--junitxml={path}")
+
             # additional reports
-            if result.get("html"):
-                path = os.path.join(pytest.result_dir, "report.html")
-                opt.append(f"--html={path}")
-            if result.get("xml"):
-                path = os.path.join(pytest.result_dir, "report.xml")
-                opt.append(f"--junitxml={path}")
             if result.get("json"):
                 path = os.path.join(pytest.result_dir, "report.json")
                 opt.append(f"--json={path}")

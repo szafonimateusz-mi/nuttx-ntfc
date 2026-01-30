@@ -96,16 +96,12 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     "--nologs",
     default=False,
     is_flag=True,
+    help="Don't store logs and results. Default: False",
 )
 @click.option(
     "--exitonfail/--no-exitonfail",
     default=False,
     is_flag=True,
-)
-@click.option(
-    "--xml",
-    is_flag=True,
-    help="Store the XML report.",
 )
 @click.option(
     "--resdir",
@@ -156,9 +152,7 @@ def cmd_test(
 
     ctx.result = {}
     ctx.result["resdir"] = kwargs.get("resdir")
-    ctx.result["html"] = kwargs.get("html")
     ctx.result["json"] = kwargs.get("json")
-    ctx.result["xml"] = kwargs.get("xml")
 
     # handle some commands in collector-only mode
     if ctx.list_tests or ctx.list_modules or ctx.collect_only:
@@ -174,12 +168,4 @@ if HAS_PYTEST_JSON:  # pragma: no cover
         "--json",
         is_flag=True,
         help="Store the JSON report.",
-    )(cmd_test)
-
-# optional html output
-if HAS_PYTEST_HTML:  # pragma: no cover
-    cmd_test = click.option(
-        "--html",
-        is_flag=True,
-        help="Store the HTML report.",
     )(cmd_test)
