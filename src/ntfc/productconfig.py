@@ -61,7 +61,7 @@ class ProductConfig:
             logger.error("no product name in configuration file!")
             return "unknown_name"
 
-    def kv_check(self, cfg: str, core: int = 0) -> bool:
+    def kv_check(self, cfg: str, core: int = 0) -> Any:
         """Check Kconfig option."""
         if len(self._cores) <= core:
             raise AttributeError(f"no data for core {core}")

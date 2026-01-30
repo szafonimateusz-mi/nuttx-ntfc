@@ -81,7 +81,7 @@ class EnvConfig:
         return self._cfg_values
 
     # dep_config
-    def kv_check(self, cfg: str, product: int = 0, core: int = 0) -> bool:
+    def kv_check(self, cfg: str, product: int = 0, core: int = 0) -> Any:
         """Check Kconfig option."""
         return self._products[product].kv_check(cfg, core)
 

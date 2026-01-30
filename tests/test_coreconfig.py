@@ -48,5 +48,31 @@ def test_product_core_config():
 
     with pytest.raises(AttributeError):
         p.cmd_check("aaa")
-    with pytest.raises(AttributeError):
-        p.kv_check("aaa")
+
+    # New behavior: kv_check returns False when no config data
+    # instead of raising an exception
+    assert p.kv_check("aaa") is False
+
+
+def test_core_config_prompt():
+    """Test CoreConfig prompt property."""
+    # Test with explicit prompt in YAML config
+    conf = {
+        "name": "test",
+        "device": "sim",
+        "prompt": "custom_prompt>",
+    }
+
+    p = CoreConfig(conf)
+    assert p.prompt == "custom_prompt>"
+
+    # Test without explicit prompt, loads from config file
+    conf = {
+        "name": "test",
+        "device": "sim",
+        "conf_path": "./tests/resources/nuttx/sim/kv_config",
+    }
+
+    p = CoreConfig(conf)
+    # Should load from kv_config file or return None
+    assert p.prompt == "nsh> "

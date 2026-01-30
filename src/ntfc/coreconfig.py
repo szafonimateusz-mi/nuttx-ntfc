@@ -77,10 +77,23 @@ class CoreConfig:
         """Return core name."""
         return self._config.get("name", "unknown_name")
 
+    def _load_prompt_from_config(self) -> Optional[str]:
+        """Load the prompt string from the .config file."""
+        return self._kv_values.get("CONFIG_NSH_PROMPT_STRING", None)
+
     @property
     def prompt(self) -> Any:
-        """Return core prompt."""
-        return self._config.get("prompt", None)
+        """Return core prompt.
+
+        First check YAML config, if not present, load from .config file.
+        """
+        # First check if prompt is explicitly set in YAML config
+        yaml_prompt = self._config.get("prompt", None)
+        if yaml_prompt:
+            return yaml_prompt
+
+        # Otherwise, load from .config file
+        return self._load_prompt_from_config()
 
     @property
     def elf_path(self) -> Any:
@@ -102,12 +115,18 @@ class CoreConfig:
         """Return core reboot command."""
         return self._config.get("reboot", "")
 
-    def kv_check(self, cfg: str) -> bool:
-        """Check Kconfig option."""
-        if not self._kv_values:
-            raise AttributeError("no config data")
+    def kv_check(self, cfg: str) -> Any:
+        """Check Kconfig option and return its value.
 
-        return self._kv_values[cfg] if self._kv_values.get(cfg) else False
+        :param cfg: Kconfig option name (e.g., 'CONFIG_DEBUG')
+        :return: Config value if set (bool True, string value, etc),
+                 False if not found
+        """
+        if not self._kv_values:
+            # No config data loaded
+            return False
+
+        return self._kv_values.get(cfg, False)
 
     def cmd_check(self, cmd: str, core: int = 0) -> bool:
         """Check if command is available in binary."""
