@@ -27,6 +27,7 @@ import pytest
 
 from ntfc.pytest.collecteditem import CollectedItem
 from ntfc.testfilter import FilterTest
+from ntfc.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.envconfig import EnvConfig
@@ -112,6 +113,9 @@ class CollectorPlugin:
                     if i + 1 < len(session.items)
                     else None
                 )
+
+                logger.debug(f"run test:{item}")
+
                 item.config.hook.pytest_runtest_protocol(
                     item=item, nextitem=nextitem
                 )
