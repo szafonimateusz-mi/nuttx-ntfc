@@ -25,9 +25,9 @@ from typing import TYPE_CHECKING, List, Tuple
 
 import pytest
 
+from ntfc.logger import logger
 from ntfc.pytest.collecteditem import CollectedItem
 from ntfc.testfilter import FilterTest
-from ntfc.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.envconfig import EnvConfig
