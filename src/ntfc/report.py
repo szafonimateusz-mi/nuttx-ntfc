@@ -181,20 +181,20 @@ class Reporter:
                 "message": "",
             }
 
-            if testcase.find("failure") is not None:
+            if testcase.find("failure") is not None:  # pragma: no cover
                 tc_info["status"] = "failed"
                 failure = testcase.find("failure")
-                if failure is not None:  # pragma: no cover
+                if failure is not None:
                     tc_info["message"] = failure.get("message", "")
-            elif testcase.find("error") is not None:
+            elif testcase.find("error") is not None:  # pragma: no cover
                 tc_info["status"] = "error"
                 error = testcase.find("error")
-                if error is not None:  # pragma: no cover
+                if error is not None:
                     tc_info["message"] = error.get("message", "")
-            elif testcase.find("skipped") is not None:
+            elif testcase.find("skipped") is not None:  # pragma: no cover
                 tc_info["status"] = "skipped"
                 skipped_elem = testcase.find("skipped")
-                if skipped_elem is not None:  # pragma: no cover
+                if skipped_elem is not None:
                     tc_info["message"] = skipped_elem.get("message", "")
 
             testcases.append(tc_info)
