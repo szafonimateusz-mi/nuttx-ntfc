@@ -370,7 +370,8 @@ def test_core_check_cmd_without_elf_parser(envconfig_dummy):
         p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
 
         # Mock send_cmd_read_until_pattern for help command
-        # Note: ProductCore.sendCommandReadUntilPattern calls dev.send_cmd_read_until_pattern
+        # Note: ProductCore.sendCommandReadUntilPattern calls
+        # dev.send_cmd_read_until_pattern
         help_output = "Available commands: free ps\n"
         dev.send_cmd_read_until_pattern.return_value = CmdReturn(
             CmdStatus.SUCCESS, None, help_output

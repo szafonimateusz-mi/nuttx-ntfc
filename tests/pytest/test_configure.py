@@ -18,8 +18,7 @@
 #
 ############################################################################
 
-from types import MethodType
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest as pytest
 
@@ -446,7 +445,8 @@ def test_switch_to_core_fixture_switch_back_failure(config_dummy, monkeypatch):
     # Verify first switch was called
     mock_core0.switch_core.assert_called_with("cpu1")
 
-    # Trigger cleanup by advancing generator (switch back fails, but doesn't raise)
+    # Trigger cleanup by advancing generator (switch back fails,
+    # but doesn't raise)
     try:
         next(gen)
     except StopIteration:

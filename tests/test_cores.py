@@ -92,7 +92,8 @@ def test_cores_smp_mode(envconfig_smp_dummy):
         c0.name = "main"
         c = CoresHandler(envconfig_smp_dummy.product[0])
 
-        # Replace cores[0] with our mock (following the pattern from test_cores_init)
+        # Replace cores[0] with our mock (following the pattern
+        # from test_cores_init)
         c._cores[0] = c0
 
         # In SMP mode, should have 2 cores

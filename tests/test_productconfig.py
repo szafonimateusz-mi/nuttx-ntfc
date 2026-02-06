@@ -151,7 +151,8 @@ def test_product_config_get_core_name():
     with pytest.raises(TypeError):
         p._get_core_name(None)
 
-    # Test with invalid cores format (coreX raises ValueError, should find core1)
+    # Test with invalid cores format (coreX raises ValueError,
+    # should find core1)
     conf = {
         "name": "product",
         "cores": {
