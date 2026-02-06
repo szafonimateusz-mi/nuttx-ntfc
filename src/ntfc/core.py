@@ -20,6 +20,7 @@
 
 """Product core class implementation."""
 
+import logging
 import re
 from typing import (
     TYPE_CHECKING,
@@ -508,3 +509,70 @@ class ProductCore:
     def start(self) -> None:
         """Start device."""
         self._device.start()
+
+    def check_cmd(self, cmd_pattern: str) -> bool:
+        """Check if a command pattern is available in the ELF binary.
+
+        This method validates whether a specific command or set of
+        commands is present in the core's ELF binary by searching for
+        corresponding symbols. It supports both single commands and
+        alternative command patterns separated by '|'.
+
+        :param cmd_pattern: Command pattern to check for. Can contain
+                           alternatives separated by '|'
+                           (e.g., 'test1|test2')
+        :return: True if the command pattern is found, False otherwise
+
+        Note:
+            - Requires ELF parser to be available in device
+            - Supports alternative patterns with '|'
+            - Used to validate core capabilities before executing
+        """
+        # Check if device supports command checking
+        if hasattr(self._device, "elf_parser") and self._device.elf_parser:
+            import re
+
+            logging.debug(f"Checking command pattern: {cmd_pattern}")
+
+            # Split by '|' to support alternative patterns
+            alternatives = (
+                cmd_pattern.split("|") if "|" in cmd_pattern else [cmd_pattern]
+            )
+
+            for pattern in alternatives:
+                # For cmocka tests, append _main to symbol name
+                symbol_pattern_str: str = (
+                    f"{pattern}_main" if "cmocka" in pattern else pattern
+                )
+
+                # Support regex wildcards
+                if ".*" in symbol_pattern_str:
+                    symbol_pattern = re.compile(symbol_pattern_str)
+                else:
+                    tmp = symbol_pattern_str
+                    symbol_pattern = tmp  # type: ignore[assignment]
+
+                if self._device.elf_parser.has_symbol(symbol_pattern):
+                    return True
+
+            return False
+
+        # Fallback: try to execute the command and check if it exists
+        logging.warning(
+            "ELF parser not available, trying command check for: "
+            f"{cmd_pattern}"
+        )
+
+        # Send 'help' command to check if command exists
+        result = self.sendCommandReadUntilPattern("help", timeout=5)
+
+        if result.status == CmdStatus.SUCCESS:
+            # Check if any of the command alternatives are in the help output
+            alternatives = (
+                cmd_pattern.split("|") if "|" in cmd_pattern else [cmd_pattern]
+            )
+            for pattern in alternatives:
+                if pattern.lower() in result.output.lower():
+                    return True
+
+        return False

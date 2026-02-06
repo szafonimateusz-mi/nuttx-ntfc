@@ -69,6 +69,39 @@ def envconfig_dummy(config_dummy):
 
 
 @pytest.fixture
+def config_smp_dummy():
+    """SMP configuration with multiple cores sharing one device."""
+    conf_dir = {
+        "config": {},
+        "product": {
+            "name": "product-smp",
+            "platform": "smp",
+            "cores": {
+                "core0": {
+                    "name": "main",
+                    "device": "sim",
+                    "elf_path": "",
+                    "uptime": 1,
+                },
+                "core1": {
+                    "name": "cpu1",
+                    "device": "sim",
+                    "elf_path": "",
+                    "uptime": 1,
+                },
+            },
+        },
+    }
+    return conf_dir
+
+
+@pytest.fixture
+def envconfig_smp_dummy(config_smp_dummy):
+    """SMP EnvConfig for testing multi-core SMP mode."""
+    return EnvConfig(config_smp_dummy)
+
+
+@pytest.fixture
 def device_dummy(config_dummy):
 
     dev = DeviceDummy(config_dummy)

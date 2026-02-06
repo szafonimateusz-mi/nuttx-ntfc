@@ -8,7 +8,10 @@ config:                           # common, global configuration options
 product:                          # many products can be supported in tests (product == product0)
 
   name: "product"                 # product name
-  cores:                          # Cores configuration, for know only core0 is used
+  platform: "amp"                 # Platform type: "amp" (default) or "smp"
+                                  # amp: Each core has its own device instance
+                                  # smp: All cores share the same device, automatic core switching
+  cores:                          # Cores configuration
     core0:                        # Main core (core 0)
       name: ''                    # Core name
       device: ''                  # Choose a device: sim, qemu

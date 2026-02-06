@@ -1,0 +1,25 @@
+config:
+  cwd: './'
+
+product:
+
+  name: "product"
+  platform: "smp"
+  cores:
+    core0:
+      name: 'main'
+      device: 'sim'
+      conf_path: './tests/resources/nuttx/sim/kv_config'
+      elf_path: './tests/resources/nuttx/sim/nuttx'
+
+    core1:
+      name: 'main'
+      device: 'sim'
+      conf_path: './tests/resources/nuttx/sim/kv_config'
+      elf_path: './tests/resources/nuttx/sim/nuttx'
+
+    core2:
+      name: 'main'
+      device: 'sim'
+      conf_path: './tests/resources/nuttx/sim/kv_config'
+      elf_path: './tests/resources/nuttx/sim/nuttx'

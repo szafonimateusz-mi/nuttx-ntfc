@@ -83,3 +83,28 @@ def test_products_init_inval():
         assert h.reboot() is True
         dev.reboot.return_value = False
         assert h.reboot() is True
+
+
+def test_products_proxy_properties():
+    """Test ProductsHandler proxy properties to first product."""
+
+    with patch("ntfc.product.Product") as mock_product:
+        first_product = mock_product.return_value
+
+        # Setup mock properties
+        first_product.conf = {"key": "value"}
+        first_product.cores = ["core0", "core1"]
+        first_product.core.return_value = "mock_core"
+
+        products = [first_product]
+        h = ProductsHandler(products)
+
+        # Test conf property proxy
+        assert h.conf == {"key": "value"}
+
+        # Test cores property proxy
+        assert h.cores == ["core0", "core1"]
+
+        # Test core method proxy
+        assert h.core(0) == "mock_core"
+        first_product.core.assert_called_with(0)

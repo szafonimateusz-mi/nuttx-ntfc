@@ -81,12 +81,24 @@ class EnvConfig:
         return self._cfg_values
 
     # dep_config
-    def kv_check(self, cfg: str, product: int = 0, core: int = 0) -> Any:
-        """Check Kconfig option."""
+    def kv_check(self, cfg: str, product: int = 0, core: int | str = 0) -> Any:
+        """Check Kconfig option.
+
+        :param cfg: Kconfig option name
+        :param product: Product index (default: 0)
+        :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
+        """
         return self._products[product].kv_check(cfg, core)
 
-    def cmd_check(self, cmd: str, product: int = 0, core: int = 0) -> bool:
-        """Check if command is available in binary."""
+    def cmd_check(
+        self, cmd: str, product: int = 0, core: int | str = 0
+    ) -> bool:
+        """Check if command is available in binary.
+
+        :param cmd: Command name or pattern (e.g., 'free' or 'free|ps')
+        :param product: Product index (default: 0)
+        :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
+        """
         product = 0
         return self._products[product].cmd_check(cmd, core)
 
@@ -94,5 +106,8 @@ class EnvConfig:
         self, _extra: str, _product: int = 0, _core: int = 0
     ) -> bool:
         """Check for extra options."""
+        if "run_in_core" in _extra:
+            return True
+
         # not supported yet
         return False

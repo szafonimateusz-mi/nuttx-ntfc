@@ -20,7 +20,7 @@
 
 """Products handler class implementation."""
 
-from typing import TYPE_CHECKING, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from ntfc.device.common import CmdReturn, CmdStatus
 from ntfc.logger import logger
@@ -167,3 +167,24 @@ class ProductsHandler:
         """Get current core."""
         # TODO: many products not supported yet
         return self._products[0].cur_core
+
+    @property
+    def conf(self) -> Any:
+        """Get configuration of the first product."""
+        # Proxy to first product's configuration
+        return self._products[0].conf
+
+    @property
+    def cores(self) -> Any:
+        """Get cores list of the first product."""
+        # Proxy to first product's cores
+        return self._products[0].cores
+
+    def core(self, cpu: int = 0) -> Any:
+        """Get core from the first product by index.
+
+        :param cpu: Core index (0, 1, 2, ...)
+        :return: ProductCore instance
+        """
+        # Proxy to first product's core
+        return self._products[0].core(cpu)

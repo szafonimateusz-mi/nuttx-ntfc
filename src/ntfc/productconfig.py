@@ -33,10 +33,43 @@ class ProductConfig:
         """Initialzie product configuration."""
         self._config = cfg
 
-        self._cores = []
-        for core in range(len(self.cores)):
-            core_cfg = CoreConfig(self.core(cpu=core))
-            self._cores.append(core_cfg)
+        # Get platform type (amp or smp), default to amp
+        self._platform: str = self._config.get("platform", "amp").lower()
+
+        # Use dictionary to store cores, key is core name from config
+        self._cores: Dict[str, CoreConfig] = {}
+        self._init_cores()
+
+    def _init_cores(self) -> None:
+        """Initialize cores dictionary from configuration."""
+        cores_config = self.cores
+        if not cores_config:
+            return
+
+        # Iterate through all coreX entries in config
+        for core_key, core_data in cores_config.items():
+            if not core_key.startswith("core") or not isinstance(
+                core_data, dict
+            ):
+                continue
+
+            # Get core name from config (e.g., 'main', 'cpu1', 'cpu2')
+            core_name = core_data.get("name", "")
+            if not core_name:
+                # Fallback: generate name from index if not specified
+                try:
+                    core_index = int(
+                        core_key[4:]
+                    )  # Extract number from "coreX"
+                    core_name = (
+                        "main" if core_index == 0 else f"cpu{core_index}"
+                    )
+                except (ValueError, IndexError):
+                    logger.warning(f"Invalid core key: {core_key}")
+                    continue
+
+            # Create CoreConfig and store with core name as key
+            self._cores[core_name] = CoreConfig(core_data)
 
     @property
     def config(self) -> Any:
@@ -61,12 +94,47 @@ class ProductConfig:
             logger.error("no product name in configuration file!")
             return "unknown_name"
 
-    def kv_check(self, cfg: str, core: int = 0) -> Any:
-        """Check Kconfig option."""
-        if len(self._cores) <= core:
-            raise AttributeError(f"no data for core {core}")
+    def _get_core_name(self, core: int | str) -> str:
+        """Convert core parameter to core name.
 
-        return self._cores[core].kv_check(cfg)
+        :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
+        :return: Core name
+        """
+        if isinstance(core, str):
+            return core
+
+        if isinstance(core, int):
+            # Convert index to name by searching in config
+            for core_key, core_data in self.cores.items():
+                if core_key.startswith("core") and isinstance(core_data, dict):
+                    try:
+                        core_index = int(
+                            core_key[4:]
+                        )  # Extract number from "coreX"
+                        if core_index == core:
+                            # Found matching core, get its name
+                            core_name: str = core_data.get(
+                                "name", "main" if core == 0 else f"cpu{core}"
+                            )
+                            return core_name
+                    except (ValueError, IndexError):
+                        continue
+            # Fallback to standard naming if not found in config
+            return "main" if core == 0 else f"cpu{core}"
+
+        raise TypeError(f"core must be int or str, got {type(core)}")
+
+    def kv_check(self, cfg: str, core: int | str = 0) -> Any:
+        """Check Kconfig option.
+
+        :param cfg: Kconfig option name
+        :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
+        """
+        core_name = self._get_core_name(core)
+        if core_name not in self._cores:
+            raise AttributeError(f"no data for core '{core}'")
+
+        return self._cores[core_name].kv_check(cfg)
 
     def core(self, cpu: int = 0) -> Dict[str, Any]:
         """Return core parameters."""
@@ -78,18 +146,60 @@ class ProductConfig:
         result = self.cores.get(cpuname, "")
         return result if isinstance(result, dict) else {}
 
-    def cmd_check(self, cmd: str, core: int = 0) -> bool:
-        """Check if command is available in binary."""
-        if len(self._cores) <= core:
-            raise AttributeError(f"no data for core {core}")
+    def cmd_check(self, cmd: str, core: int | str = 0) -> bool:
+        """Check if command is available in binary.
 
-        return self._cores[core].cmd_check(cmd)
+        :param cmd: Command name or pattern (e.g., 'free' or 'free|ps')
+        :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
+        """
+        core_name = self._get_core_name(core)
+        if core_name not in self._cores:
+            raise AttributeError(f"no data for core '{core}'")
+
+        return self._cores[core_name].cmd_check(cmd)
 
     @property
     def cores_num(self) -> int:
         """Get number of cores."""
         return len(self._cores)
 
+    @property
+    def core_names(self) -> list[str]:
+        """Get list of core names."""
+        return list(self._cores.keys())
+
     def cfg_core(self, cpu: int) -> CoreConfig:
-        """Get core configuration."""
-        return self._cores[cpu]
+        """Get core configuration by index.
+
+        :param cpu: Core index (0, 1, 2, ...)
+        :return: CoreConfig instance
+        """
+        core_name = self._get_core_name(cpu)
+        if core_name not in self._cores:
+            raise AttributeError(f"no data for core index {cpu}")
+        return self._cores[core_name]
+
+    def cfg_core_by_name(self, name: str) -> CoreConfig:
+        """Get core configuration by name.
+
+        :param name: Core name ('main', 'cpu1', 'cpu2', ...)
+        :return: CoreConfig instance
+        """
+        if name not in self._cores:
+            raise AttributeError(f"no data for core '{name}'")
+        return self._cores[name]
+
+    @property
+    def platform(self) -> str:
+        """Get platform type (amp or smp)."""
+        return self._platform
+
+    @property
+    def is_smp(self) -> bool:
+        """Check if platform is SMP."""
+        return self._platform == "smp"
+
+    @property
+    def is_amp(self) -> bool:
+        """Check if platform is AMP."""
+        return self._platform == "amp"

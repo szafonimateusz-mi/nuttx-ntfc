@@ -81,3 +81,169 @@ def test_product_config():
         p.cmd_check("aaa")
     with pytest.raises(AttributeError):
         p.kv_check("aaa")
+
+
+def test_product_config_core_parsing():
+    """Test ProductConfig with various core configurations."""
+
+    # Test with invalid core keys (should be skipped)
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"name": "main", "device": "sim"},
+            "invalid_key": {"name": "should_be_skipped"},
+            "core1": {"name": "cpu1", "device": "sim"},
+        },
+    }
+    p = ProductConfig(conf)
+    assert p.cores_num == 2
+    assert "main" in p.core_names
+    assert "cpu1" in p.core_names
+
+    # Test with empty name (should auto-generate)
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"device": "sim"},  # Empty name -> "main"
+            "core1": {"device": "sim"},  # Empty name -> "cpu1"
+            "core2": {"device": "sim"},  # Empty name -> "cpu2"
+        },
+    }
+    p = ProductConfig(conf)
+    assert p.core_names == ["main", "cpu1", "cpu2"]
+
+    # Test with invalid core key format (should skip)
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"name": "main", "device": "sim"},
+            "core_invalid": {"device": "sim"},  # Invalid format
+        },
+    }
+    p = ProductConfig(conf)
+    assert p.cores_num == 1
+    assert p.core_names == ["main"]
+
+
+def test_product_config_get_core_name():
+    """Test _get_core_name method with various inputs."""
+
+    # Test with string input (should return as-is)
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"name": "main", "device": "sim"},
+            "core1": {"name": "cpu1", "device": "sim"},
+        },
+    }
+    p = ProductConfig(conf)
+    assert p._get_core_name("main") == "main"
+    assert p._get_core_name("cpu1") == "cpu1"
+
+    # Test with invalid type
+    conf = {
+        "name": "product",
+        "cores": {"core0": {"name": "main", "device": "sim"}},
+    }
+    p = ProductConfig(conf)
+    with pytest.raises(TypeError):
+        p._get_core_name([1, 2, 3])
+    with pytest.raises(TypeError):
+        p._get_core_name(None)
+
+    # Test with invalid cores format (coreX raises ValueError, should find core1)
+    conf = {
+        "name": "product",
+        "cores": {
+            "coreX": {"name": "invalid", "device": "sim"},
+            "core1": {"name": "cpu1", "device": "sim"},
+        },
+    }
+    p = ProductConfig(conf)
+    assert p._get_core_name(1) == "cpu1"
+
+    # Test with non-core keys (should skip invalid_key and find core1)
+    conf = {
+        "name": "product",
+        "cores": {
+            "invalid_key": {"name": "should_be_skipped"},
+            "core1": {"name": "cpu1", "device": "sim"},
+        },
+    }
+    p = ProductConfig(conf)
+    assert p._get_core_name(1) == "cpu1"
+
+
+def test_product_config_core_names_property():
+    """Test core_names property."""
+
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"name": "main", "device": "sim"},
+            "core1": {"name": "cpu1", "device": "sim"},
+            "core2": {"name": "cpu2", "device": "sim"},
+        },
+    }
+
+    p = ProductConfig(conf)
+    assert p.core_names == ["main", "cpu1", "cpu2"]
+
+
+def test_product_config_cfg_core():
+    """Test cfg_core and cfg_core_by_name methods."""
+
+    conf = {
+        "name": "product",
+        "cores": {
+            "core0": {"name": "main", "device": "sim"},
+            "core1": {"name": "cpu1", "device": "sim"},
+        },
+    }
+
+    p = ProductConfig(conf)
+
+    # Test cfg_core_by_name with valid names
+    core0 = p.cfg_core_by_name("main")
+    assert core0 is not None
+    assert core0._config["name"] == "main"
+
+    core1 = p.cfg_core_by_name("cpu1")
+    assert core1 is not None
+    assert core1._config["name"] == "cpu1"
+
+    # Test cfg_core_by_name with invalid name
+    with pytest.raises(AttributeError, match="no data for core 'invalid'"):
+        p.cfg_core_by_name("invalid")
+
+    # Test cfg_core with invalid index
+    with pytest.raises(AttributeError, match="no data for core index 5"):
+        p.cfg_core(5)
+
+
+def test_product_config_platform_properties():
+    """Test platform, is_smp, and is_amp properties."""
+
+    # Test with AMP platform (default)
+    conf_amp = {
+        "name": "product",
+        "platform": "amp",
+        "cores": {"core0": {"name": "main", "device": "sim"}},
+    }
+
+    p_amp = ProductConfig(conf_amp)
+    assert p_amp.platform == "amp"
+    assert p_amp.is_amp is True
+    assert p_amp.is_smp is False
+
+    # Test with SMP platform
+    conf_smp = {
+        "name": "product",
+        "platform": "smp",
+        "cores": {"core0": {"name": "main", "device": "sim"}},
+    }
+
+    p_smp = ProductConfig(conf_smp)
+    assert p_smp.platform == "smp"
+    assert p_smp.is_smp is True
+    assert p_smp.is_amp is False

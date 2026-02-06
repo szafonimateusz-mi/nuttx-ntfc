@@ -123,3 +123,16 @@ def test_envconfig_product():
     assert env.product_get(1) is not None
     assert env.product_get(2) is not None
     assert env.product_get(4) is None
+
+
+def test_envconfig_extra_check(envconfig_dummy):
+    """Test extra_check method for run_in_core option."""
+
+    # Test with run_in_core in extra options
+    assert envconfig_dummy.extra_check("run_in_core=cpu1") is True
+
+    # Test without run_in_core
+    assert envconfig_dummy.extra_check("some_other_option") is False
+
+    # Test with empty string
+    assert envconfig_dummy.extra_check("") is False

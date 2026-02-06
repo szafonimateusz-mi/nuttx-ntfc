@@ -82,3 +82,31 @@ def test_cores_init(envconfig_dummy):
         assert c.reboot() is True
         c.core(0).reboot.return_value = True
         assert c.reboot() is True
+
+
+def test_cores_smp_mode(envconfig_smp_dummy):
+    """Test CoresHandler in SMP mode."""
+
+    with patch("ntfc.core.ProductCore") as mock_product_core:
+        c0 = mock_product_core.return_value
+        c0.name = "main"
+        c = CoresHandler(envconfig_smp_dummy.product[0])
+
+        # Replace cores[0] with our mock (following the pattern from test_cores_init)
+        c._cores[0] = c0
+
+        # In SMP mode, should have 2 cores
+        assert len(c.cores) == 2
+
+        # Test sendCommand in SMP mode (only executes on core0)
+        c0.sendCommand.return_value = 0
+        assert c.sendCommand("test") == 0
+        c0.sendCommand.assert_called_once()
+
+        # Test sendCommandReadUntilPattern in SMP mode
+        c0.sendCommandReadUntilPattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS
+        )
+        result = c.sendCommandReadUntilPattern("test")
+        assert result.status == CmdStatus.SUCCESS
+        c0.sendCommandReadUntilPattern.assert_called_once()

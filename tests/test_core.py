@@ -19,7 +19,7 @@
 ############################################################################
 
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -354,3 +354,105 @@ def test_core_get_current_prompt(envconfig_dummy):
             CmdStatus.SUCCESS, re.match(rb"(\S+)>", b"nsh>")
         )
         assert p.get_current_prompt() == "nsh>"
+
+
+def test_core_check_cmd_without_elf_parser(envconfig_dummy):
+    """Test check_cmd fallback when ELF parser is not available."""
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        # Set required attributes (but NOT elf_parser)
+        dev.prompt = b"nsh>"
+        dev.no_cmd = "command not found"
+        # IMPORTANT: Explicitly set elf_parser to None to prevent MagicMock
+        # from auto-creating it as a truthy attribute
+        dev.elf_parser = None
+
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        # Mock send_cmd_read_until_pattern for help command
+        # Note: ProductCore.sendCommandReadUntilPattern calls dev.send_cmd_read_until_pattern
+        help_output = "Available commands: free ps\n"
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS, None, help_output
+        )
+
+        # Test command found in help output
+        assert p.check_cmd("free") is True
+
+        # Reset the mock for next call
+        dev.send_cmd_read_until_pattern.reset_mock()
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS, None, help_output
+        )
+        assert p.check_cmd("free|ps") is True
+
+        # Reset the mock for next call
+        dev.send_cmd_read_until_pattern.reset_mock()
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS, None, help_output
+        )
+        assert p.check_cmd("ps") is True
+
+        # Reset the mock for next call
+        dev.send_cmd_read_until_pattern.reset_mock()
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS, None, help_output
+        )
+
+        # Test command not found in help output
+        assert p.check_cmd("nonexistent") is False
+
+        # Test with failed help command
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.TIMEOUT
+        )
+        assert p.check_cmd("test") is False
+
+
+def test_core_check_cmd_with_elf_parser(envconfig_dummy):
+    """Test check_cmd with ELF parser available."""
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        dev.prompt = b"nsh>"
+        dev.no_cmd = "command not found"
+
+        # Create a mock ELF parser
+        mock_elf_parser = MagicMock()
+        mock_elf_parser.has_symbol.return_value = False
+
+        # Set elf_parser on the device
+        dev.elf_parser = mock_elf_parser
+
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        # Test command not found
+        assert p.check_cmd("free") is False
+        mock_elf_parser.has_symbol.assert_called_with("free")
+
+        # Test command found
+        mock_elf_parser.has_symbol.return_value = True
+        assert p.check_cmd("ps") is True
+        mock_elf_parser.has_symbol.assert_called_with("ps")
+
+        # Test cmocka pattern (should append _main)
+        mock_elf_parser.has_symbol.return_value = True
+        assert p.check_cmd("test_cmocka") is True
+        mock_elf_parser.has_symbol.assert_called_with("test_cmocka_main")
+
+        # Test alternatives with pipe
+        mock_elf_parser.has_symbol.side_effect = [False, True]
+        assert p.check_cmd("test1|test2") is True
+
+        # Test regex wildcard pattern
+        mock_elf_parser.has_symbol.side_effect = None
+        mock_elf_parser.has_symbol.return_value = True
+        import re
+
+        assert p.check_cmd("test.*") is True
+        # The pattern should be compiled as regex
+        call_args = mock_elf_parser.has_symbol.call_args
+        assert isinstance(call_args[0][0], re.Pattern)
+
+        # Test all alternatives not found
+        mock_elf_parser.has_symbol.return_value = False
+        assert p.check_cmd("nonexistent1|nonexistent2") is False

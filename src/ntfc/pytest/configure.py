@@ -82,12 +82,67 @@ class PytestConfigPlugin:
             "performance: Tests for performance evaluation",
             "cmd_check: Check if specified commands are enabled",
             "dep_config: Check if macros are enabled in .config file",
-            "extra_opts: Additional parameters for testing",
+            "extra_opts: Additional parameters for testing "
+            "(e.g., --run_in_cores=cpu1,cpu2)",
             "config_value_check: Validate complex configuration strings",
         ]
 
         for m in markers:
             config.addinivalue_line("markers", m)
+
+    def pytest_generate_tests(  # noqa: C901
+        self, metafunc: pytest.Metafunc
+    ) -> None:
+        """Generate parametrized tests for multi-core execution.
+
+        This hook handles parametrization of tests that use the 'core'
+        fixture based on the @pytest.mark.extra_opts marker with
+        --run_in_cores argument.
+
+        Usage in test:
+            @pytest.mark.extra_opts("--run_in_cores=cpu1,cpu2")
+            def test_multi_core(core):
+                # This test will run on cpu1 and cpu2
+                pass
+
+        :param metafunc: pytest metafunc object
+        """
+        # Skip if 'core' fixture not used
+        if "core" not in metafunc.fixturenames:
+            return
+
+        # Check if test has @pytest.mark.parametrize
+        has_parametrize_marker = any(
+            marker.name == "parametrize"
+            for marker in metafunc.definition.iter_markers("parametrize")
+        )
+        if has_parametrize_marker:
+            return
+
+        cores_opt = ""
+
+        # Check if test has extra_opts marker with --run_in_cores
+        for marker in metafunc.definition.own_markers:
+            if marker.name == "extra_opts":
+                for arg in marker.args:
+                    if arg.startswith("--run_in_cores"):
+                        cores_opt = arg.split("=", 1)[1]
+                        break
+                if cores_opt:
+                    break
+
+        # Parse cores list
+        cores_list = [c.strip() for c in cores_opt.split(",") if c.strip()]
+
+        # Default to main core if no cores specified
+        if not cores_list:
+            cores_list = ["main"]
+            logger.warning(
+                "No valid cores provided via --run_in_cores option, "
+                "fallback to ['main']"
+            )
+
+        metafunc.parametrize("core", cores_list)
 
     def pytest_runtest_makereport(  # noqa: C901
         self, item: pytest.Item, call: pytest.CallInfo[None]
@@ -200,3 +255,81 @@ class PytestConfigPlugin:
         if need_reboot:  # pragma: no cover
             logger.info(f"Reboot device, reason: {report.longrepr}")
             self._device_reboot()
+
+    @pytest.fixture  # type: ignore
+    def switch_to_core(self, request: pytest.FixtureRequest) -> Any:
+        """Switch to a specific core for SMP multi-core testing.
+
+        This fixture is used in SMP mode to run tests on specific cores.
+        It automatically switches back to the main core after the test.
+
+        Usage:
+            @pytest.mark.extra_opts("--run_in_cores=cpu1,cpu2")
+            def test_multi_core(core):
+                # Test will automatically run on cpu1 and cpu2
+                # No need to manually switch, framework handles it
+                pytest.product.sendCommand("test_command")
+
+        For SMP mode only:
+            - Checks if the product supports SMP
+            - Validates that the target core exists
+            - Switches to the target core before test execution
+            - Automatically switches back to main core after test
+
+        :param request: pytest request object
+        :yield: None
+        """
+        # Get product from pytest session
+        if not hasattr(pytest, "product") or not pytest.product:
+            pytest.skip("Pytest does not have product object")
+
+        product = pytest.product
+
+        # Check if product supports SMP
+        if not product.conf.is_smp:
+            pytest.skip("Product is not in SMP mode")
+
+        # Get the core parameter from the test
+        core = getattr(request, "param", None)
+
+        if not core:
+            pytest.skip("No core specified for switching")
+
+        # Validate core exists
+        core_list = product.cores
+        if not core_list:
+            pytest.skip("Current product has no valid core list")
+
+        if core not in core_list:
+            pytest.skip(f"Current product does not have core: '{core}'")
+
+        # Get main core (core0)
+        main_core = core_list[0]
+        switch_core_flag = False
+
+        # Switch to target core if not already on main core
+        if core != main_core:
+            logger.info(f"Switching to core: {core}")
+
+            # Use core0's device to switch cores
+            ret = product.core(0).switch_core(core)
+
+            if ret == 0:  # CmdStatus.SUCCESS
+                switch_core_flag = True
+                logger.info(f"Successfully switched to core: {core}")
+            else:
+                pytest.skip(f"Failed to switch to core {core}")
+        else:
+            logger.info(f"Already on main core: {main_core}")
+
+        yield
+
+        # Switch back to main core after test
+        if switch_core_flag:
+            logger.info(f"Switching back to main core: {main_core}")
+            ret = product.core(0).switch_core(main_core)
+
+            if ret != 0:  # CmdStatus.SUCCESS
+                logger.warning(
+                    f"Failed to switch back to main core {main_core}"
+                )

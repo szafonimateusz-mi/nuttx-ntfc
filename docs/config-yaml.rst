@@ -49,8 +49,80 @@ This file defines device-under-test (DUT) setup and global configuration.
          # Device-specific configuration
 
 
-The file structure is prepared to support multi-core test cases,
-but this is not yet supported in NTFC.
+Platform Types
+==============
+
+NTFC supports two multi-core platform types:
+
+**AMP (Asymmetric Multi-Processing)** - Default mode
+
+In AMP mode, each core has its own device instance. Tests are executed on
+specific cores based on the core configuration. Each core operates independently
+with its own memory space and execution context.
+
+.. code-block:: yaml
+
+   product:
+     name: "product-name"
+     platform: "amp"              # Optional, defaults to "amp"
+     cores:
+       core0:
+         name: 'main'
+         device: 'qemu'
+         # ... core0 configuration
+       core1:
+         name: 'cpu1'
+         device: 'qemu'
+         # ... core1 configuration
+
+Use AMP when:
+
+- Each core has its own device/serial interface
+- Cores run independently
+- Testing different firmware images on each core
+
+**SMP (Symmetric Multi-Processing)**
+
+In SMP mode, all cores share the same device instance. NTFC automatically
+switches between cores during test execution using the NuttX ``cu`` (call up)
+command. Tests are parametrized to run on each core sequentially.
+
+.. code-block:: yaml
+
+   product:
+     name: "product-name"
+     platform: "smp"              # Enable SMP mode
+     cores:
+       core0:
+         name: 'main'
+         device: 'serial'
+         exec_path: '/dev/ttyUSB0'
+         exec_args: '115200,n,8,1'
+         # ... core0 configuration
+       core1:
+         name: 'cpu1'
+         # core1 shares the same device in SMP mode
+       core2:
+         name: 'cpu2'
+         # core2 shares the same device in SMP mode
+
+Use SMP when:
+
+- Multiple cores share the same device/serial interface
+- Testing SMP NuttX configuration
+- Need to run tests on different cores through a single interface
+
+**Running tests on specific cores (SMP):**
+
+When SMP mode is enabled, you can specify which cores to run tests on using
+the ``--run_in_cores`` option:
+
+.. code-block:: bash
+
+   python -m ntfc test --run_in_cores=main,cpu1,cpu2
+
+This will parametrize tests to run on each specified core. NTFC automatically
+handles core switching before and after each test execution.
 
 Device Types
 ============
@@ -177,6 +249,21 @@ Example usage with ``st-flash`` tool:
 
    flash: 'st-flash write $IMAGE_BIN 0x08000000'
    reboot: 'st-flash reset'
+
+Product Configuration Fields
+============================
+
+.. list-table::
+   :header-rows: 1
+
+   * - Field
+     - Description
+   * - ``name``
+     - Product identifier
+   * - ``platform``
+     - Platform type: ``amp`` (default) or ``smp``. See `Platform Types`_ section
+   * - ``cores``
+     - List of product cores (core0, core1, etc.)
 
 Core Configuration Fields
 =========================

@@ -57,10 +57,26 @@ class CoresHandler:
         if not isinstance(conf, ProductConfig):
             raise TypeError("Config instance is required")
 
+        self._conf = conf
         self._cores: List[ProductCore] = []
-        for core in range(conf.cores_num):
-            dev = get_device(conf.cfg_core(core))
-            self._cores.append(ProductCore(dev, conf.cfg_core(core)))
+
+        # For SMP mode, only create one device instance from core0
+        # For AMP mode, create separate device instances for each core
+        if conf.is_smp:
+            # SMP: Create only core0 device, but track all cores
+            dev = get_device(conf.cfg_core(0))
+            self._cores.append(ProductCore(dev, conf.cfg_core(0)))
+
+            # Add logical cores for SMP (without creating new devices)
+            # These will be used for core switching via device commands
+            for core in range(1, conf.cores_num):
+                # Reuse the same device but with different core config
+                self._cores.append(ProductCore(dev, conf.cfg_core(core)))
+        else:
+            # AMP: Create separate device for each core
+            for core in range(conf.cores_num):
+                dev = get_device(conf.cfg_core(core))
+                self._cores.append(ProductCore(dev, conf.cfg_core(core)))
 
     def init(self) -> None:
         """Initialize all cores."""
@@ -94,25 +110,40 @@ class CoresHandler:
         match_all: bool = True,
         regexp: bool = False,
     ) -> "CmdStatus":
-        """Send command to all cores in parallel."""
-        results = run_parallel(
-            self._cores,
-            "sendCommand",
-            cmd,
-            expects,
-            args,
-            timeout,
-            flag,
-            match_all,
-            regexp,
-        )
+        """Send command to all cores.
 
-        for idx, ret in enumerate(results):
-            if ret != CmdStatus.SUCCESS:
-                logger.info(f"sendCommand failed for core {self._cores[idx]}")
-                return cast("CmdStatus", ret)
+        In AMP mode: Execute in parallel on all cores.
+        In SMP mode: Execute only on the current active core.
+        Use switch_to_core() fixture to switch cores for multi-core.
+        """
+        if self._conf.is_smp:
+            # SMP mode: Execute only on core0 (main core)
+            # Use switch_to_core() fixture for multi-core testing
+            return self._cores[0].sendCommand(
+                cmd, expects, args, timeout, flag, match_all, regexp
+            )
+        else:
+            # AMP mode: Execute in parallel on all cores
+            results = run_parallel(
+                self._cores,
+                "sendCommand",
+                cmd,
+                expects,
+                args,
+                timeout,
+                flag,
+                match_all,
+                regexp,
+            )
 
-        return CmdStatus.SUCCESS
+            for idx, ret in enumerate(results):
+                if ret != CmdStatus.SUCCESS:
+                    logger.info(
+                        f"sendCommand failed for core {self._cores[idx]}"
+                    )
+                    return cast("CmdStatus", ret)
+
+            return CmdStatus.SUCCESS
 
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
@@ -121,25 +152,38 @@ class CoresHandler:
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
     ) -> "CmdReturn":
-        """Send command to all cores in parallel."""
-        results = run_parallel(
-            self._cores,
-            "sendCommandReadUntilPattern",
-            cmd,
-            pattern,
-            args,
-            timeout,
-        )
+        """Send command to all cores.
 
-        for idx, ret in enumerate(results):
-            if ret.status != CmdStatus.SUCCESS:
-                logger.info(
-                    f"sendCommandReadUntilPattern failed for "
-                    f"core {self._cores[idx]}"
-                )
-                return cast("CmdReturn", ret)
+        In AMP mode: Execute in parallel on all cores.
+        In SMP mode: Execute only on the current active core.
+        Use switch_to_core() fixture to switch cores for multi-core.
+        """
+        if self._conf.is_smp:
+            # SMP mode: Execute only on core0 (main core)
+            # Use switch_to_core() fixture for multi-core testing
+            return self._cores[0].sendCommandReadUntilPattern(
+                cmd, pattern, args, timeout
+            )
+        else:
+            # AMP mode: Execute in parallel on all cores
+            results = run_parallel(
+                self._cores,
+                "sendCommandReadUntilPattern",
+                cmd,
+                pattern,
+                args,
+                timeout,
+            )
 
-        return CmdReturn(CmdStatus.SUCCESS)
+            for idx, ret in enumerate(results):
+                if ret.status != CmdStatus.SUCCESS:
+                    logger.info(
+                        f"sendCommandReadUntilPattern failed for "
+                        f"core {self._cores[idx]}"
+                    )
+                    return cast("CmdReturn", ret)
+
+            return CmdReturn(CmdStatus.SUCCESS)
 
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Send ctrl command to all cores in parallel."""
