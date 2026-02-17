@@ -57,6 +57,9 @@ from ntfc.pytest.mypytest import MyPytest
 @pass_environment
 def main(ctx: Environment, debug: bool, verbose: bool) -> bool:
     """VFTC - NuttX Testing Framework for Community."""
+    print("-" * 80)
+    print(f"NTFC PID: {os.getpid()}", file=sys.stderr)
+    print("-" * 80)
     ctx.debug = debug
     ctx.verbose = verbose
 
