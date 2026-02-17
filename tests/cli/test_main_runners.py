@@ -22,6 +22,7 @@ import pytest  # type: ignore
 from click.testing import CliRunner
 
 from ntfc.cli.main import main
+from ntfc.products import ProductsHandler
 
 
 @pytest.fixture
@@ -148,6 +149,15 @@ def test_main_build(runner, monkeypatch):
 
 
 def test_main_test_simple(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        ProductsHandler,
+        "notalive",
+        property(lambda _self: False),
+    )
 
     args = [
         "test",
@@ -176,7 +186,16 @@ def test_main_test_simple(runner, monkeypatch):
     assert result.exit_code == 0
 
 
-def test_main_test_debug(runner):
+def test_main_test_debug(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        ProductsHandler,
+        "notalive",
+        property(lambda _self: False),
+    )
 
     args = [
         "--debug",
@@ -200,7 +219,16 @@ def test_main_test_debug(runner):
     assert result.exit_code == 0
 
 
-def test_main_test_modules(runner):
+def test_main_test_modules(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        ProductsHandler,
+        "notalive",
+        property(lambda _self: False),
+    )
 
     args = [
         "test",
@@ -230,7 +258,16 @@ def test_main_test_modules(runner):
     assert result.exit_code == 0
 
 
-def test_main_test_tests(runner):
+def test_main_test_tests(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        ProductsHandler,
+        "notalive",
+        property(lambda _self: False),
+    )
 
     args = [
         "test",

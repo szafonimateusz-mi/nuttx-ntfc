@@ -34,6 +34,7 @@ def test_product_core_config():
 
     p = CoreConfig(conf)
 
+    assert p.elf_path == "./tests/resources/nuttx/sim/nuttx"
     assert p.kv_check("aaa") is False
     assert p.kv_check("CONFIG_SYSTEM_NSH") is True
 
