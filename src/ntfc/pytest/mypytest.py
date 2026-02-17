@@ -39,6 +39,7 @@ from .collected import Collected
 from .collector import CollectorPlugin
 from .configure import PytestConfigPlugin
 from .runner import RunnerPlugin
+from .signal_plugin import SignalPlugin
 
 # required for plugin
 hookimpl = HookimplMarker("pytest")
@@ -106,6 +107,7 @@ class MyPytest:
 
         # add our custom pytest plugin
         self._plugins.append(self._ptconfig)
+        self._plugins.append(SignalPlugin())
 
     def _kv_validate(
         self, product: Product, core: int

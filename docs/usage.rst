@@ -140,3 +140,20 @@ Options:
   Default: ``./external/config.yaml``
 
 * ``--flash / --no-flash``  Flash image. Default: True.
+
+Signal Handlers
+===============
+
+During a test run, NTFC installs custom signal handlers to aid debugging.
+Send a signal to the NTFC process (use the PID printed at startup) with
+``kill -<SIGNAL> <PID>``.
+
+* ``SIGUSR1`` — Runs the ``ps`` command on the device under test and prints
+  the output to stdout.
+
+* ``SIGUSR2`` — Try to force panic the device.
+
+* ``SIGQUIT`` — Dumps comprehensive NTFC debug information to stderr.
+
+The handlers are installed at pytest session start and restored when the
+session finishes.
