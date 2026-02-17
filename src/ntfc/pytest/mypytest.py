@@ -148,6 +148,10 @@ class MyPytest:
         opt.extend(extra_opt)
         plugins.extend(extra_plugins)
 
+        # disable pytest stdout capture so we can use print() when pytest
+        # is running
+        opt.append("-s")
+
         # override tox.ini configuration from package root
         opt.extend(["--color=yes", "--override-ini", "addopts="])
 
