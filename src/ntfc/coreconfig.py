@@ -56,7 +56,9 @@ class CoreConfig:
 
                     # parse option value
                     if val[0] == "y":
-                        val_parsed: Union[bool, str] = True
+                        val_parsed: Union[bool, str, int] = True
+                    elif "0x" in val:
+                        val_parsed = int(val[:-1], 16)
                     else:
                         val_parsed = val[1:-2]
 
