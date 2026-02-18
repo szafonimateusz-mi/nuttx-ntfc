@@ -42,8 +42,8 @@ class DeviceQemu(DeviceHost):
         """Initialize QEMU emulator device."""
         DeviceHost.__init__(self, conf)
 
-    def start(self) -> None:
-        """Start QEMU emulator."""
+    def _start_impl(self) -> None:
+        """Start QEMU emulator implementation."""
         elf = self._conf.elf_path
         exec_path = self._conf.exec_path
         exec_args = self._conf.exec_args

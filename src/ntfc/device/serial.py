@@ -132,8 +132,8 @@ class DeviceSerial(DeviceCommon):
 
         return self._ser.read(size=1024)
 
-    def start(self) -> None:
-        """Start serial communication."""
+    def _start_impl(self) -> None:
+        """Start serial communication implementation."""
         timeout = 0
         path = self._conf.exec_path
         args = self._conf.exec_args
@@ -166,12 +166,12 @@ class DeviceSerial(DeviceCommon):
             return True
         return False
 
-    def poweroff(self) -> None:
-        """Poweroff the device."""
+    def _poweroff_impl(self) -> None:
+        """Poweroff the device implementation."""
         print("TODO: poweroff")  # pragma: no cover
 
-    def reboot(self, timeout: int = 1) -> bool:
-        """Reboot the device."""
+    def _reboot_impl(self, timeout: int = 1) -> bool:
+        """Reboot the device implementation."""
         if self._conf.reboot:  # pragma: no cover
             logger.info("reboot core")
             cmd = self._conf.reboot

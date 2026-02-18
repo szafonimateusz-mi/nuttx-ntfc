@@ -18,6 +18,7 @@
 #
 ############################################################################
 
+from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -48,7 +49,7 @@ class DeviceMock(DeviceCommon):
     ):
         """Mock."""
 
-    def start(self):
+    def _start_impl(self):
         """Mock."""
 
     def name(self):
@@ -57,11 +58,12 @@ class DeviceMock(DeviceCommon):
     def notalive(self):
         """Mock."""
 
-    def poweroff(self):
+    def _poweroff_impl(self):
         """Mock."""
 
-    def reboot(self, _):
+    def _reboot_impl(self, _):
         """Mock."""
+        return False
 
 
 def test_device_common_data():
@@ -105,6 +107,9 @@ def test_device_common_send_cmd_pattern():
 
         assert dev.flood is False
 
+        log = StringIO()
+        dev.start_log_collect({"device": log, "console": log})
+
         g_mock_read = b"x" * 10000
         ret = dev.send_cmd_read_until_pattern(b"", b"x", 1)
         assert ret.status == CmdStatus.SUCCESS
@@ -114,6 +119,11 @@ def test_device_common_send_cmd_pattern():
         assert ret.status == CmdStatus.TIMEOUT
 
         assert dev.flood is True
+        assert "fault detected: flood" in log.getvalue()
+
+        g_mock_read = b"x" * 10000
+        ret = dev.send_cmd_read_until_pattern(b"", b"y", 1)
+        assert ret.status == CmdStatus.TIMEOUT
 
 
 def test_device_common_panic_char():
@@ -126,6 +136,45 @@ def test_device_common_panic_char():
 
             dev = DeviceMock(config)
             assert dev.panic_char == "X"
+
+
+def test_device_common_log_helpers():
+
+    with patch("ntfc.envconfig.EnvConfig") as mockdevice:
+        config = mockdevice.return_value
+
+        dev = DeviceMock(config)
+        log = StringIO()
+        dev.start_log_collect({"device": log, "console": log})
+
+        dev._log_device_event("event")
+        dev._log_console_input(b"cmd\n")
+        dev.log_event("public")
+
+        dev._log_runtime_event("reboot")
+        dev._mark_started()
+        dev._log_runtime_event("poweroff")
+        assert dev.reboot() is False
+
+        output = log.getvalue()
+        assert "event" in output
+        assert "console_in" in output
+        assert "public" in output
+        assert "runtime=unknown" in output
+        assert "poweroff runtime=" in output
+
+        dev.start_log_collect({})
+        dev._log_device_event("no-device-log")
+        dev._log_console_input(b"no-device-log")
+
+        dev.stop_log_collect()
+        dev._log_device_event("buffered")
+        dev._log_console_input(b"buffered-cmd")
+        dev.start_log_collect({})
+        dev.start_log_collect({"device": log, "console": log})
+        output = log.getvalue()
+        assert "buffered" in output
+        assert "buffered-cmd" in output
 
 
 # TODO: missing tests

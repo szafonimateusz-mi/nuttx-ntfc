@@ -39,8 +39,8 @@ class DeviceSim(DeviceHost):
         """Initialize sim emulator device."""
         DeviceHost.__init__(self, conf)
 
-    def start(self) -> None:
-        """Start sim emulator."""
+    def _start_impl(self) -> None:
+        """Start sim emulator implementation."""
         elf = self._conf.elf_path
         if not elf:
             raise IOError

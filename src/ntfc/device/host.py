@@ -170,10 +170,11 @@ class DeviceHost(DeviceCommon):
             return True
         return not self._child.isalive()
 
-    def poweroff(self) -> None:
-        """Poweroff the device."""
+    def _poweroff_impl(self) -> None:
+        """Poweroff the device implementation."""
         self.send_command(self._dev.poweroff_cmd)
 
-    def reboot(self, timeout: int) -> bool:
-        """Reboot the device."""
+    def _reboot_impl(self, timeout: int) -> bool:
+        """Reboot the device implementation."""
+        del timeout
         return bool(self._dev_reopen())

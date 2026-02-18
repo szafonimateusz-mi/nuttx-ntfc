@@ -52,6 +52,7 @@ class RunnerPlugin:
             for core in product.cores:
                 # close files
                 self._logs[product.name][core]["console"].close()
+                self._logs[product.name][core]["device"].close()
 
     def _collect_device_logs(self, request: Any) -> None:
         """Initiate device log writing into a new test file."""
@@ -78,6 +79,10 @@ class RunnerPlugin:
                 # open log files
                 tmp = os.path.join(core_dir, testname + ".console.txt")
                 self._logs[name][core]["console"] = open(
+                    tmp, "a", encoding="utf-8"
+                )
+                tmp = os.path.join(core_dir, testname + ".device.txt")
+                self._logs[name][core]["device"] = open(
                     tmp, "a", encoding="utf-8"
                 )
 

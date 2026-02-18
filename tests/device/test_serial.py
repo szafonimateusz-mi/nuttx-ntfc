@@ -121,6 +121,7 @@ def test_device_sim_init(serial_config, serial_pair):
     assert ser._write(b"a") is None
     assert ser._write_ctrl("a") is None
     assert ser.reboot() is False
+    assert ser.poweroff() is None
 
     stop.set()
     device_thread.join(timeout=1)

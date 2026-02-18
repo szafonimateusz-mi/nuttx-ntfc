@@ -115,6 +115,15 @@ Test Execution Options:
 
 * ``--nologs`` - When set, test logs are not saved locally
 
+Log Notes:
+
+* Collected logs are stored per test under ``result/<timestamp>/<product>/<core>/``.
+  ``*.console.txt`` holds the raw console output.
+* ``*.device.txt`` captures device control/status events and includes
+  console input lines tagged as ``console_in`` to correlate commands with events.
+  Device events that happen before log collection starts are buffered and written
+  when the device log file is opened.
+
 * ``--exitonfail / --no-exitonfail`` - Stop test execution on first failure.
   Default: False (continue on failure).
 

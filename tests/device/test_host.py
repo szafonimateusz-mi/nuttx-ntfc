@@ -26,7 +26,7 @@ from ntfc.device.host import DeviceHost
 
 # need to define start which is specific for device implementation
 class DeviceHost2(DeviceHost):
-    def start(self):
+    def _start_impl(self):
         pass
 
     def _write(self, data):
@@ -153,6 +153,15 @@ def test_device_host_command(envconfig_dummy):
         _ = dev.send_cmd_read_until_pattern(b"hello", "Hello, World!", 1)
 
     assert dev.send_ctrl_cmd("Z") == 0
+
+
+def test_device_host_reboot_failure(envconfig_dummy, monkeypatch):
+
+    conf = envconfig_dummy.product[0].cfg_core(0)
+    dev = DeviceHost2(conf)
+
+    monkeypatch.setattr(dev, "_dev_reopen", lambda: None)
+    assert dev.reboot(1) is False
 
 
 # TODO: more tests for host device !!!!

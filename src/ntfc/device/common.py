@@ -94,6 +94,7 @@ class DeviceCommon(ABC):
 
         # logs handler
         self._logs: Optional[Dict[str, Any]] = None
+        self._pending_device_events: list[str] = []
 
         # device health
         self._crash = Event()
@@ -104,6 +105,53 @@ class DeviceCommon(ABC):
 
         self._read_all_sleep = 0.1
         self._has_echo = echo
+        self._start_time: Optional[float] = None
+
+    def _mark_started(self) -> None:
+        """Mark device start time for runtime tracking."""
+        self._start_time = time.monotonic()
+
+    def _runtime_since_start(self) -> Optional[float]:
+        """Return runtime since start, if available."""
+        if self._start_time is None:
+            return None
+        return time.monotonic() - self._start_time
+
+    def _log_device_line(self, line: str) -> None:
+        """Log or buffer a pre-formatted device log line."""
+        if self._logs is None:
+            self._pending_device_events.append(line)
+            return
+
+        log = self._logs.get("device")
+        if not log:
+            self._pending_device_events.append(line)
+            return
+
+        log.write(line)
+        log.flush()
+
+    def _log_device_event(self, message: str) -> None:
+        """Log device control/status event with timestamp."""
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        self._log_device_line(f"{ts} | {message}\n")
+
+    def _log_runtime_event(self, action: str) -> None:
+        """Log runtime duration for a device action."""
+        runtime = self._runtime_since_start()
+        if runtime is None:
+            message = f"{action} runtime=unknown"
+        else:
+            message = f"{action} runtime={runtime:.2f}s"
+        logger.info(message)
+        self._log_device_event(message)
+
+    def _log_console_input(self, data: bytes) -> None:
+        """Log console input (commands) with timestamp."""
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        text = data.decode("utf-8", errors="replace")
+        text = text.replace("\r", "\\r").replace("\n", "\\n")
+        self._log_device_line(f"{ts} | console_in | {text}\n")
 
     def _console_log(self, data: bytes) -> None:
         """Log console output."""
@@ -112,15 +160,25 @@ class DeviceCommon(ABC):
 
     def _wait_for_boot(self, timeout: int = 5) -> bool:
         """Wait for device booted."""
+        self._log_device_event(f"wait_for_boot start timeout={timeout}s")
+        start = time.monotonic()
         end_time = time.time() + timeout
         while time.time() < end_time:
             # send new line and expect prompt in returned data
             ret = self.send_command(b"\n", 1)
             if self._dev.prompt in ret:
+                elapsed = time.monotonic() - start
+                self._log_device_event(
+                    f"wait_for_boot exit status=success elapsed={elapsed:.2f}s"
+                )
                 return True
 
             time.sleep(1)
 
+        elapsed = time.monotonic() - start
+        self._log_device_event(
+            f"wait_for_boot exit status=timeout elapsed={elapsed:.2f}s"
+        )
         return False
 
     def _read_all(self, timeout: float = 1.0) -> bytes:
@@ -138,6 +196,8 @@ class DeviceCommon(ABC):
                 key in output for key in self._dev.crash_keys
             ):  # pragma: no cover
                 logger.info("Assertion detected! Set crash flag")
+                if not self._crash.is_set():
+                    self._log_device_event("fault detected: crash")
                 self._crash.set()
                 break
 
@@ -148,6 +208,8 @@ class DeviceCommon(ABC):
                     time_now - self._busy_loop_last > self._BUSY_LOOP_TIMEOUT
                 ):  # pragma: no cover
                     self._busy_loop_last = 0
+                    if not self._busy_loop.is_set():
+                        self._log_device_event("fault detected: busyloop")
                     self._busy_loop.set()
                     break
             else:
@@ -188,6 +250,8 @@ class DeviceCommon(ABC):
         # convert string to bytes
         if not isinstance(cmd, bytes):
             cmd = cmd.encode("utf-8")
+
+        self._log_console_input(cmd)
 
         # read any pending output and drop
         _ = self._read_all(timeout=0)
@@ -269,6 +333,8 @@ class DeviceCommon(ABC):
         if ret == CmdStatus.TIMEOUT:
             chunk = self._read_all(0.1)
             if len(chunk) > 0:
+                if not self._flood.is_set():
+                    self._log_device_event("fault detected: flood")
                 self._flood.set()
             output_all += chunk
             self._console_log(chunk)
@@ -277,13 +343,24 @@ class DeviceCommon(ABC):
 
     def send_ctrl_cmd(self, ctrl_char: str) -> CmdStatus:
         """Send control command to the device."""
+        self._log_device_event(f"send_ctrl_cmd ctrl+{ctrl_char}")
         self._write_ctrl(ctrl_char)
         logger.info(f"Sent Ctrl+{ctrl_char}.")
         return CmdStatus.SUCCESS
 
+    def log_event(self, message: str) -> None:
+        """Public hook for device event logging."""
+        self._log_device_event(message)
+
     def start_log_collect(self, logs: dict[str, Any]) -> None:
         """Start device log collector."""
         self._logs = logs
+        if self._pending_device_events:
+            log = self._logs.get("device")
+            if log:
+                log.writelines(self._pending_device_events)
+                log.flush()
+                self._pending_device_events.clear()
 
     def stop_log_collect(self) -> None:
         """Stop device log collector."""
@@ -351,9 +428,11 @@ class DeviceCommon(ABC):
     def _dev_is_health_priv(self) -> bool:
         """Check if the device is OK."""
 
-    @abstractmethod
     def start(self) -> None:
         """Start device."""
+        self._mark_started()
+        self._log_device_event("start")
+        self._start_impl()
 
     @property
     @abstractmethod
@@ -365,10 +444,28 @@ class DeviceCommon(ABC):
     def notalive(self) -> bool:
         """Check if the device is dead."""
 
-    @abstractmethod
     def poweroff(self) -> None:
         """Poweroff the device."""
+        self._log_runtime_event("poweroff")
+        self._poweroff_impl()
+
+    def reboot(self, timeout: int = 1) -> bool:
+        """Reboot the device."""
+        self._log_runtime_event("reboot")
+        self._log_device_event(f"reboot timeout={timeout}s")
+        success = self._reboot_impl(timeout)
+        if success:
+            self._mark_started()
+        return success
 
     @abstractmethod
-    def reboot(self, timeout: int) -> bool:
-        """Reboot the device."""
+    def _start_impl(self) -> None:
+        """Start device implementation."""
+
+    @abstractmethod
+    def _poweroff_impl(self) -> None:
+        """Poweroff device implementation."""
+
+    @abstractmethod
+    def _reboot_impl(self, timeout: int) -> bool:
+        """Reboot device implementation."""

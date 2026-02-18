@@ -452,6 +452,7 @@ class ProductCore:
         if not panic_char:
             logger.error("Force panic not supported.")
             return False
+        self._device.log_event("force_panic")
         ret = self.device.send_ctrl_cmd(panic_char)
         if isinstance(ret, CmdStatus):
             return ret == CmdStatus.SUCCESS
