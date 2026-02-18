@@ -190,6 +190,26 @@ def test_core_reboot(envconfig_dummy):
         assert p.reboot() is True
 
 
+def test_core_force_panic(envconfig_dummy):
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        dev.panic_char = ""
+        assert p.force_panic() is False
+
+        dev.panic_char = "X"
+        dev.send_ctrl_cmd.return_value = CmdStatus.TIMEOUT
+        assert p.force_panic() is False
+
+        dev.send_ctrl_cmd.return_value = CmdStatus.SUCCESS
+        assert p.force_panic() is True
+        dev.send_ctrl_cmd.assert_called_with("X")
+
+        dev.send_ctrl_cmd.return_value = True
+        assert p.force_panic() is True
+
+
 def test_core_busyloop(envconfig_dummy):
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value

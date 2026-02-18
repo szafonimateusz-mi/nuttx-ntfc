@@ -18,6 +18,8 @@
 #
 ############################################################################
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from ntfc.product import Product
@@ -48,5 +50,8 @@ def test_product_properties(envconfig_dummy):
     assert p.sendCommandReadUntilPattern("test")
     assert p.sendCtrlCmd("C") is None
     assert p.reboot()
+    p._cores.force_panic = MagicMock(return_value=True)
+    assert p.force_panic() is True
+    p._cores.force_panic.assert_called_with(30)
     assert p.cur_core == "test"
     assert p.core(0) is not None

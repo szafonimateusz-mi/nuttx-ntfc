@@ -39,7 +39,7 @@ def test_product_core_config():
     assert p.kv_check("CONFIG_SYSTEM_NSH") is True
 
     # check hex conversion
-    assert p.kv_check("CONFIG_SYSLOG_DEFAULT_MASK") == 0xff
+    assert p.kv_check("CONFIG_SYSLOG_DEFAULT_MASK") == 0xFF
 
     assert p.cmd_check("aaa") is False
     assert p.cmd_check("hello_main") is True
@@ -56,6 +56,7 @@ def test_product_core_config():
     # kv_check returns False when no config data
     # instead of raising an exception
     assert p.kv_check("aaa") is False
+
 
 def test_core_config_prompt():
     # Test with explicit prompt in YAML config

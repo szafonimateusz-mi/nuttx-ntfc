@@ -123,6 +123,10 @@ class Product:
         """Call for all cores."""
         return self._cores.reboot(timeout)
 
+    def force_panic(self, timeout: int = 30) -> bool:
+        """Call for all cores."""
+        return self._cores.force_panic(timeout)
+
     @property
     def busyloop(self) -> bool:
         """Call for all cores."""

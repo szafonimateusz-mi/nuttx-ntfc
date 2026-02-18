@@ -18,6 +18,7 @@
 #
 ############################################################################
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from ntfc.device.common import CmdReturn, CmdStatus, DeviceCommon
@@ -113,6 +114,18 @@ def test_device_common_send_cmd_pattern():
         assert ret.status == CmdStatus.TIMEOUT
 
         assert dev.flood is True
+
+
+def test_device_common_panic_char():
+
+    with patch("ntfc.device.common.get_os") as mock_get_os:
+        mock_get_os.return_value = SimpleNamespace(panic_char="X")
+
+        with patch("ntfc.envconfig.EnvConfig") as mockdevice:
+            config = mockdevice.return_value
+
+            dev = DeviceMock(config)
+            assert dev.panic_char == "X"
 
 
 # TODO: missing tests

@@ -156,6 +156,16 @@ class ProductsHandler:
                 logger.info(f"reboot failed for product {self._products[idx]}")
         return True
 
+    def force_panic(self) -> bool:
+        """Force panic for all products in parallel."""
+        results = run_parallel(self._products, "force_panic")
+        for idx, result in enumerate(results):
+            if not result:
+                logger.info(
+                    f"force_panic failed for product {self._products[idx]}"
+                )
+        return True
+
     @property
     def cur_name(self) -> str:
         """Get current product."""

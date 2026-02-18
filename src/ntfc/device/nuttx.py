@@ -43,6 +43,7 @@ class DeviceNuttx(OSCommon):
     _UNAME_CMD = b"uname -o"
     _UNAME_RESP = b"NuttX"
     _CRASH_KEYS = [b"Assertion"]
+    _PANIC_CHAR = r"/"
 
     def __init__(self, conf: "CoreConfig"):
         """Initialize NuttX OS abstraction."""
@@ -87,3 +88,11 @@ class DeviceNuttx(OSCommon):
     def crash_keys(self) -> List[bytes]:
         """Get keys related to OS crash."""
         return self._CRASH_KEYS
+
+    @property
+    def panic_char(self) -> str:
+        """Get force panic character."""
+        ch = self._conf.kv_check("CONFIG_TTY_FORCE_PANIC_CHAR")
+        if not ch:
+            return ""
+        return chr(ch + 0x1F)

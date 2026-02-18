@@ -441,6 +441,22 @@ class ProductCore:
 
         return success
 
+    def force_panic(self, timeout: int = 30) -> bool:
+        """Trigger a kernel panic for debugging and core dump generation.
+
+        :return: True if the force panic was successful, False otherwise.
+        """
+        del timeout
+
+        panic_char = self.device.panic_char
+        if not panic_char:
+            logger.error("Force panic not supported.")
+            return False
+        ret = self.device.send_ctrl_cmd(panic_char)
+        if isinstance(ret, CmdStatus):
+            return ret == CmdStatus.SUCCESS
+        return bool(ret)
+
     @property
     def busyloop(self) -> bool:
         """Check if the device is in busy loop."""

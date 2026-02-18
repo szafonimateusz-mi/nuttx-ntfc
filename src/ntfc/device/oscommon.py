@@ -65,3 +65,8 @@ class OSCommon(ABC):
     @abstractmethod
     def crash_keys(self) -> List[bytes]:
         """Get keys related to OS crash."""
+
+    @property
+    @abstractmethod
+    def panic_char(self) -> str:
+        """Get force panic character."""

@@ -83,6 +83,14 @@ def test_cores_init(envconfig_dummy):
         c.core(0).reboot.return_value = True
         assert c.reboot() is True
 
+        with patch("ntfc.cores.run_parallel") as mock_parallel:
+            mock_parallel.return_value = [False]
+            assert c.force_panic() is True
+
+        with patch("ntfc.cores.run_parallel") as mock_parallel:
+            mock_parallel.return_value = [True]
+            assert c.force_panic() is True
+
 
 def test_cores_smp_mode(envconfig_smp_dummy):
     """Test CoresHandler in SMP mode."""

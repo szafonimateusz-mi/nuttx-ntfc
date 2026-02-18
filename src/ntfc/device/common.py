@@ -330,6 +330,11 @@ class DeviceCommon(ABC):
         """Check if the device is crashed."""
         return self._crash.is_set()
 
+    @property
+    def panic_char(self) -> str:
+        """Get force panic character."""
+        return self._dev.panic_char
+
     @abstractmethod
     def _read(self) -> bytes:
         """Read data from the device."""

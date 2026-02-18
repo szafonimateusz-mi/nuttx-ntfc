@@ -38,3 +38,8 @@ def test_device_nuttx_init():
         assert d.reboot_cmd is not None
         assert d.uname_cmd is not None
         assert d.crash_keys is not None
+
+        config.kv_check.return_value = 0
+        assert d.panic_char == ""
+        config.kv_check.return_value = 1
+        assert d.panic_char == chr(0x20)

@@ -84,6 +84,14 @@ def test_products_init_inval():
         dev.reboot.return_value = False
         assert h.reboot() is True
 
+        with patch("ntfc.products.run_parallel") as mock_parallel:
+            mock_parallel.return_value = [False]
+            assert h.force_panic() is True
+
+        with patch("ntfc.products.run_parallel") as mock_parallel:
+            mock_parallel.return_value = [True]
+            assert h.force_panic() is True
+
 
 def test_products_proxy_properties():
     """Test ProductsHandler proxy properties to first product."""

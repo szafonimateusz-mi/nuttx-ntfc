@@ -197,6 +197,14 @@ class CoresHandler:
                 logger.info(f"reboot failed for core {self._cores[idx]}")
         return True
 
+    def force_panic(self, timeout: int = 30) -> bool:
+        """Force panic for all cores in parallel."""
+        results = run_parallel(self._cores, "force_panic", timeout)
+        for idx, result in enumerate(results):
+            if not result:
+                logger.info(f"force_panic failed for core {self._cores[idx]}")
+        return True
+
     @property
     def busyloop(self) -> bool:
         """Get busyloop flag from cores in parallel."""
