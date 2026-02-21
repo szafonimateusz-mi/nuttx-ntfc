@@ -421,6 +421,7 @@ class Reporter:
         result_summary = f"{table}\n{total_summary}"
 
         # IMPORTANT: Output to console
+        print("\n\n")
         print(result_summary)
 
         # Save text version
