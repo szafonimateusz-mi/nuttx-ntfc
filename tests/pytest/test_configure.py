@@ -18,6 +18,7 @@
 #
 ############################################################################
 
+import os
 from unittest.mock import MagicMock
 
 import pytest as pytest
@@ -28,6 +29,38 @@ from ntfc.pytest.configure import PytestConfigPlugin
 def test_test_pytestconfigureplugin_init(config_dummy):
 
     _ = PytestConfigPlugin(config_dummy)
+
+
+def test_pytest_configure_log_file_uses_result_dir(
+    config_dummy, monkeypatch, tmp_path
+):
+    """Test pytest_configure sets log_file inside result_dir when available."""
+    monkeypatch.setattr(pytest, "result_dir", str(tmp_path))
+
+    plugin = PytestConfigPlugin(config_dummy)
+    mock_config = MagicMock()
+    mock_config.option = MagicMock()
+    plugin.pytest_configure(mock_config)
+
+    assert mock_config.option.log_file == os.path.join(
+        str(tmp_path), "pytest.debug.log"
+    )
+
+
+def test_pytest_configure_no_log_file_without_result_dir(
+    config_dummy, monkeypatch
+):
+    """Test pytest_configure skips log_file when result_dir is not set."""
+    monkeypatch.setattr(pytest, "result_dir", "")
+
+    plugin = PytestConfigPlugin(config_dummy)
+    mock_config = MagicMock()
+    mock_config.option = MagicMock()
+    plugin.pytest_configure(mock_config)
+
+    # log_file_level is only set alongside log_file; if result_dir is empty
+    # the whole block is skipped — attribute stays a MagicMock, not "DEBUG"
+    assert mock_config.option.log_file_level != "DEBUG"
 
 
 def test_pytest_generate_tests_with_core_fixture(config_dummy, monkeypatch):

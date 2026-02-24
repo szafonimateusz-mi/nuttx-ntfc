@@ -20,6 +20,7 @@
 
 """NTFC plugin configuration for pytest."""
 
+import os
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -71,9 +72,13 @@ class PytestConfigPlugin:
         else:
             config.option.log_cli_level = "ERROR"
 
-        config.option.log_file = "pytest.debug.log"
-        config.option.log_file_level = "DEBUG"
-        config.option.log_file_date_format = "%Y-%m-%d %H:%M:%S"
+        result_dir = getattr(pytest, "result_dir", "")
+        if result_dir:
+            config.option.log_file = os.path.join(
+                result_dir, "pytest.debug.log"
+            )
+            config.option.log_file_level = "DEBUG"
+            config.option.log_file_date_format = "%Y-%m-%d %H:%M:%S"
 
         # custom markers (equivalent of markers= section)
         markers = [
