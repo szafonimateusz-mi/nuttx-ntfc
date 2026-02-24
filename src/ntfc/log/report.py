@@ -299,6 +299,9 @@ class Reporter:
         """
         logger.info("[Report] Generating final result summary...")
 
+        report_dir = os.path.join(session_dir, "report")
+        os.makedirs(report_dir, exist_ok=True)
+
         # Check if we need to split report.xml into per-module files
         single_report = os.path.join(session_dir, "report.xml")
         if os.path.exists(single_report):
@@ -306,9 +309,7 @@ class Reporter:
                 "[Report] Splitting single report into per-module "
                 "reports..."
             )
-            module_files = self._split_xml_by_module(
-                single_report, session_dir
-            )
+            module_files = self._split_xml_by_module(single_report, report_dir)
 
             # Generate per-module HTML reports
             for module_name, xml_file in module_files.items():
@@ -343,7 +344,7 @@ class Reporter:
         last_id = 0
 
         # Iterate through all completed XML reports
-        for file in sorted(glob.glob(os.path.join(session_dir, "*.xml"))):
+        for file in sorted(glob.glob(os.path.join(report_dir, "*.xml"))):
             # Skip skip_list.xml
             if file == os.path.join(
                 session_dir, "logs/skip_list.xml"
@@ -380,8 +381,8 @@ class Reporter:
             testrun_id = m.group(2) if m else "000"
             last_id = max(last_id, int(testrun_id))
 
-            # Get relative path from session directory
-            rel_file = file.replace(session_dir + "/", "")
+            # Get relative path from report directory
+            rel_file = file.replace(report_dir + "/", "")
             rel_html = rel_file.replace(".xml", ".html")
 
             table.add_row(
@@ -425,7 +426,7 @@ class Reporter:
         print(result_summary)
 
         # Save text version
-        with open(os.path.join(session_dir, "result_summary.txt"), "w") as f:
+        with open(os.path.join(report_dir, "result_summary.txt"), "w") as f:
             f.write(result_summary)
 
         # Generate HTML version with hyperlinks
@@ -433,7 +434,7 @@ class Reporter:
             report_link = row[-1]
             row[-1] = f"<a href='{report_link}'>{report_link}</a>"
 
-        with open(os.path.join(session_dir, "result_summary.html"), "w") as f:
+        with open(os.path.join(report_dir, "result_summary.html"), "w") as f:
             html_str = table.get_html_string(format=True)
             f.write(html.unescape(html_str))
 

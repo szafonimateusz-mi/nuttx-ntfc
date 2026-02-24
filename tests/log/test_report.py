@@ -54,41 +54,39 @@ def create_test_xml(
 def test_generate_result_summary_with_single_xml_file():
     """Test generate_result_summary with a single XML file."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create test XML file
-        xml_file = os.path.join(tmpdir, "001_test.xml")
-        create_test_xml(xml_file, tests=10, passes=8, failures=2)
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        # Create logs directory
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        # Create test XML file directly in report_dir
+        xml_file = os.path.join(report_dir, "001_test.xml")
+        create_test_xml(xml_file, tests=10, passes=8, failures=2)
 
         # Call generate_result_summary - should not raise
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        # Verify summary files were created
-        assert os.path.exists(os.path.join(tmpdir, "result_summary.txt"))
-        assert os.path.exists(os.path.join(tmpdir, "result_summary.html"))
+        # Verify summary files were created in report_dir
+        assert os.path.exists(os.path.join(report_dir, "result_summary.txt"))
+        assert os.path.exists(os.path.join(report_dir, "result_summary.html"))
 
 
 def test_generate_result_summary_with_multiple_files():
     """Test generate_result_summary aggregates multiple XML files."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create multiple test XML files
-        xml_file1 = os.path.join(tmpdir, "001_module1.xml")
-        xml_file2 = os.path.join(tmpdir, "002_module2.xml")
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
+
+        # Create multiple test XML files in report_dir
+        xml_file1 = os.path.join(report_dir, "001_module1.xml")
+        xml_file2 = os.path.join(report_dir, "002_module2.xml")
         create_test_xml(xml_file1, tests=10, passes=8, failures=2)
         create_test_xml(xml_file2, tests=5, passes=5, failures=0)
-
-        # Create logs directory
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
         # Verify both summary files created and contain results
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         assert os.path.exists(summary_file)
         with open(summary_file) as f:
             content = f.read()
@@ -99,18 +97,18 @@ def test_generate_result_summary_with_multiple_files():
 def test_generate_result_summary_with_skipped_tests():
     """Test generate_result_summary with skipped tests."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        xml_file = os.path.join(tmpdir, "001_test.xml")
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
+
+        xml_file = os.path.join(report_dir, "001_test.xml")
         create_test_xml(
             xml_file, tests=10, passes=5, failures=0, skipped=5, errors=0
         )
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         with open(summary_file) as f:
             content = f.read()
             assert "skipped" in content
@@ -119,16 +117,16 @@ def test_generate_result_summary_with_skipped_tests():
 def test_generate_result_summary_with_errors():
     """Test generate_result_summary with test errors."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        xml_file = os.path.join(tmpdir, "001_test.xml")
-        create_test_xml(xml_file, tests=10, passes=7, failures=2, errors=1)
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        xml_file = os.path.join(report_dir, "001_test.xml")
+        create_test_xml(xml_file, tests=10, passes=7, failures=2, errors=1)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         with open(summary_file) as f:
             content = f.read()
             assert "errors" in content
@@ -137,21 +135,23 @@ def test_generate_result_summary_with_errors():
 def test_generate_result_summary_skips_skip_list():
     """Test generate_result_summary ignores skip_list.xml."""
     with tempfile.TemporaryDirectory() as tmpdir:
+        report_dir = os.path.join(tmpdir, "report")
         logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        os.makedirs(report_dir)
+        os.makedirs(logs_dir)
 
         # Create skip_list.xml which should be ignored
         skip_list_file = os.path.join(logs_dir, "skip_list.xml")
         create_test_xml(skip_list_file, tests=5, passes=5)
 
-        # Create actual test file
-        xml_file = os.path.join(tmpdir, "001_test.xml")
+        # Create actual test file in report_dir
+        xml_file = os.path.join(report_dir, "001_test.xml")
         create_test_xml(xml_file, tests=10, passes=8, failures=2)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         with open(summary_file) as f:
             content = f.read()
             # Verify summary was created (skip_list should be ignored)
@@ -162,13 +162,13 @@ def test_generate_result_summary_skips_skip_list():
 def test_generate_result_summary_with_invalid_xml():
     """Test generate_result_summary handles invalid XML gracefully."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create invalid XML file
-        invalid_xml = os.path.join(tmpdir, "001_invalid.xml")
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
+
+        # Create invalid XML file in report_dir
+        invalid_xml = os.path.join(report_dir, "001_invalid.xml")
         with open(invalid_xml, "w") as f:
             f.write("not valid xml content")
-
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
 
         # Should not raise exception
         reporter = Reporter()
@@ -178,14 +178,14 @@ def test_generate_result_summary_with_invalid_xml():
 def test_generate_result_summary_missing_testsuite():
     """Test generate_result_summary with XML missing testsuite element."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create XML without testsuite element
-        xml_file = os.path.join(tmpdir, "001_test.xml")
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
+
+        # Create XML without testsuite element in report_dir
+        xml_file = os.path.join(report_dir, "001_test.xml")
         testsuites = Element("testsuites")
         tree = ElementTree(testsuites)
         tree.write(xml_file)
-
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
 
         # Should handle gracefully
         reporter = Reporter()
@@ -195,17 +195,17 @@ def test_generate_result_summary_missing_testsuite():
 def test_generate_result_summary_html_output():
     """Test generate_result_summary generates HTML with hyperlinks."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        xml_file = os.path.join(tmpdir, "001_test.xml")
-        create_test_xml(xml_file, tests=10, passes=8, failures=2)
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        xml_file = os.path.join(report_dir, "001_test.xml")
+        create_test_xml(xml_file, tests=10, passes=8, failures=2)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        # Check HTML file exists and contains hyperlinks
-        html_file = os.path.join(tmpdir, "result_summary.html")
+        # Check HTML file exists in report_dir and contains hyperlinks
+        html_file = os.path.join(report_dir, "result_summary.html")
         assert os.path.exists(html_file)
 
         with open(html_file) as f:
@@ -216,31 +216,25 @@ def test_generate_result_summary_html_output():
 def test_generate_result_summary_with_nested_directories():
     """Test generate_result_summary with XML files in nested directories."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create nested directory structure
-        subdir = os.path.join(tmpdir, "results", "subdir")
-        os.makedirs(subdir, exist_ok=True)
+        # report_dir is created by generate_result_summary itself
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        xml_file = os.path.join(subdir, "001_test.xml")
+        xml_file = os.path.join(report_dir, "001_test.xml")
         create_test_xml(xml_file, tests=10, passes=8, failures=2)
-
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        # Should find and process nested XML files
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        # Summary should be in report_dir
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         assert os.path.exists(summary_file)
 
 
 def test_generate_result_summary_exception_handling():
     """Test generate_result_summary handles exceptions gracefully."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Call with valid but empty directory
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-
+        # Call with valid but empty directory (no XMLs anywhere)
         # Should not raise even with no XML files
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
@@ -249,16 +243,16 @@ def test_generate_result_summary_exception_handling():
 def test_generate_result_summary_with_zero_time():
     """Test generate_result_summary with zero test execution time."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        xml_file = os.path.join(tmpdir, "001_test.xml")
-        create_test_xml(xml_file, tests=5, passes=5, time=0.0)
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        xml_file = os.path.join(report_dir, "001_test.xml")
+        create_test_xml(xml_file, tests=5, passes=5, time=0.0)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         with open(summary_file) as f:
             content = f.read()
             # Should handle zero time properly
@@ -268,25 +262,28 @@ def test_generate_result_summary_with_zero_time():
 def test_generate_result_summary_with_large_time():
     """Test generate_result_summary with large test execution time."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        xml_file = os.path.join(tmpdir, "001_test.xml")
-        create_test_xml(xml_file, tests=5, passes=5, time=3600.5)
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
+        xml_file = os.path.join(report_dir, "001_test.xml")
+        create_test_xml(xml_file, tests=5, passes=5, time=3600.5)
 
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         assert os.path.exists(summary_file)
 
 
 def test_generate_result_summary_complex_scenario():
     """Test generate_result_summary with complex scenario."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create multiple files with varying results
+        report_dir = os.path.join(tmpdir, "report")
+        os.makedirs(report_dir)
+
+        # Create multiple files with varying results in report_dir
         create_test_xml(
-            os.path.join(tmpdir, "001_module1.xml"),
+            os.path.join(report_dir, "001_module1.xml"),
             tests=20,
             passes=18,
             failures=2,
@@ -294,7 +291,7 @@ def test_generate_result_summary_complex_scenario():
             errors=0,
         )
         create_test_xml(
-            os.path.join(tmpdir, "002_module2.xml"),
+            os.path.join(report_dir, "002_module2.xml"),
             tests=15,
             passes=12,
             failures=2,
@@ -302,7 +299,7 @@ def test_generate_result_summary_complex_scenario():
             errors=0,
         )
         create_test_xml(
-            os.path.join(tmpdir, "003_module3.xml"),
+            os.path.join(report_dir, "003_module3.xml"),
             tests=10,
             passes=8,
             failures=1,
@@ -310,14 +307,11 @@ def test_generate_result_summary_complex_scenario():
             errors=1,
         )
 
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
         # Verify all files were processed and summary created
-        summary_file = os.path.join(tmpdir, "result_summary.txt")
+        summary_file = os.path.join(report_dir, "result_summary.txt")
         assert os.path.exists(summary_file)
         with open(summary_file) as f:
             content = f.read()
@@ -418,9 +412,9 @@ def test_generate_html_for_module():
 
 
 def test_generate_result_summary_splits_single_report():
-    """Test splitting single report.xml into per-module files."""
+    """Test splitting single report.xml into per-module files in report_dir."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create a single report.xml file (as pytest would)
+        # Create a single report.xml file (as pytest would) in session_dir
         single_xml = os.path.join(tmpdir, "report.xml")
         testsuites = Element("testsuites")
         testsuite = SubElement(testsuites, "testsuite")
@@ -462,29 +456,26 @@ def test_generate_result_summary_splits_single_report():
         with open(single_html, "w") as f:
             f.write("<html><body>test</body></html>")
 
-        # Create logs directory
-        logs_dir = os.path.join(tmpdir, "logs")
-        os.makedirs(logs_dir, exist_ok=True)
-
         # Call generate_result_summary
         reporter = Reporter()
         reporter.generate_result_summary(tmpdir)
 
-        # Verify single files were removed
+        # Verify single files were removed from session_dir
         assert not os.path.exists(single_xml)
         assert not os.path.exists(single_html)
 
-        # Verify per-module files were created
-        module1_xml = os.path.join(tmpdir, "001_test_module1.xml")
-        module1_html = os.path.join(tmpdir, "001_test_module1.html")
-        module2_xml = os.path.join(tmpdir, "002_test_module2.xml")
-        module2_html = os.path.join(tmpdir, "002_test_module2.html")
+        # Verify per-module files were created in report_dir
+        report_dir = os.path.join(tmpdir, "report")
+        module1_xml = os.path.join(report_dir, "001_test_module1.xml")
+        module1_html = os.path.join(report_dir, "001_test_module1.html")
+        module2_xml = os.path.join(report_dir, "002_test_module2.xml")
+        module2_html = os.path.join(report_dir, "002_test_module2.html")
 
         assert os.path.exists(module1_xml)
         assert os.path.exists(module1_html)
         assert os.path.exists(module2_xml)
         assert os.path.exists(module2_html)
 
-        # Verify summary files were created
-        assert os.path.exists(os.path.join(tmpdir, "result_summary.txt"))
-        assert os.path.exists(os.path.join(tmpdir, "result_summary.html"))
+        # Verify summary files were created in report_dir
+        assert os.path.exists(os.path.join(report_dir, "result_summary.txt"))
+        assert os.path.exists(os.path.join(report_dir, "result_summary.html"))
