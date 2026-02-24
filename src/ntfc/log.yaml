@@ -18,28 +18,16 @@
 #
 ############################################################################
 
-"""Plugins loader."""
+log:
+  # Directory where test result sessions are stored
+  results_dir: "./result"
 
-from importlib.metadata import entry_points
-from typing import TYPE_CHECKING
+  # Remove session directories older than this many days (null to disable)
+  max_age_days: 30
 
-import ntfc.ext_commands
-from ntfc.log.logger import logger
+  # Keep only this many of the latest session directories (null to disable)
+  max_count: 100
 
-if TYPE_CHECKING:
-    import click
-
-commands_list: list["click.Command"] = []
-
-# default commands
-commands_list.extend(ntfc.ext_commands.commands_list)
-
-# load external plugins
-eps = entry_points(group="ntfc.extensions")
-for entry in eps:  # pragma: no cover
-    logger.info("loading %s %s ...", entry.name, entry.value)
-    plugin = entry.load()
-    if entry.name == "commands":
-        commands_list.extend(plugin.commands_list)
-    else:
-        raise AssertionError("Unsupported entry name")
+  # Remove oldest session directories when total size exceeds this value in
+  # megabytes (null to disable)
+  max_size_mb: 50

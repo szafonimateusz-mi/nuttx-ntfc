@@ -33,7 +33,7 @@ from typing import (
 from ntfc.core import ProductCore
 from ntfc.device.common import CmdReturn, CmdStatus
 from ntfc.device.getdev import get_device
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 from ntfc.parallel import run_parallel
 from ntfc.productconfig import ProductConfig
 

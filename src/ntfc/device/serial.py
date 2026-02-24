@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, Dict
 
 import serial  # type: ignore
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 from .common import DeviceCommon
 

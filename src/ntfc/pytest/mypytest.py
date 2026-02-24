@@ -23,7 +23,6 @@
 import importlib.util
 import os
 import sys
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
@@ -31,7 +30,8 @@ import yaml  # type: ignore
 from pluggy import HookimplMarker
 
 from ntfc.envconfig import EnvConfig
-from ntfc.logger import logger
+from ntfc.log.logger import logger
+from ntfc.log.manager import LogManager
 from ntfc.product import Product
 from ntfc.products import ProductsHandler
 
@@ -273,11 +273,10 @@ class MyPytest:
             opt.append(testpath)
 
         if not nologs:  # pragma: no cover
-            # create result directory
-            result_dir = result.get("resdir", "./result")
-            time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            pytest.result_dir = os.path.join(result_dir, time_now)
-            os.makedirs(pytest.result_dir, exist_ok=True)
+            # create result directory via LogManager
+            log_manager = LogManager(result.get("logcfg"))
+            log_manager.cleanup()
+            pytest.result_dir = log_manager.new_session_dir()
 
             # always include HTML and XML report if logs enabled
             path = os.path.join(pytest.result_dir, "report.html")

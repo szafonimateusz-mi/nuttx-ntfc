@@ -33,7 +33,7 @@ from prettytable import PrettyTable
 
 from ntfc.builder import NuttXBuilder
 from ntfc.cli.environment import Environment, pass_environment
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 from ntfc.plugins_loader import commands_list
 from ntfc.pytest.formatters import list_modules_run, list_tests_run
 from ntfc.pytest.mypytest import MyPytest

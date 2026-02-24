@@ -104,10 +104,10 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     is_flag=True,
 )
 @click.option(
-    "--resdir",
+    "--logcfg",
     type=click.Path(resolve_path=False),
-    default="./result",
-    help="Where to store the test results. Default: ./result",
+    default=None,
+    help="Path to log configuration file. Default: log.yaml",
 )
 def cmd_test(
     ctx: Environment,
@@ -151,7 +151,7 @@ def cmd_test(
     ctx.collect_only = collect_only
 
     ctx.result = {}
-    ctx.result["resdir"] = kwargs.get("resdir")
+    ctx.result["logcfg"] = kwargs.get("logcfg")
     ctx.result["json"] = kwargs.get("json")
 
     # handle some commands in collector-only mode

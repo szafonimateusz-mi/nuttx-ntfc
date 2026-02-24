@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 
 class NuttXBuilder:

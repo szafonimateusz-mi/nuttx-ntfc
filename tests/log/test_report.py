@@ -24,7 +24,7 @@ import os
 import tempfile
 from xml.etree.ElementTree import Element, ElementTree, SubElement
 
-from ntfc.report import Reporter
+from ntfc.log.report import Reporter
 
 
 def create_test_xml(

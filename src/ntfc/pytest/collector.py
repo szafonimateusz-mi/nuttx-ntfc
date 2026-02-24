@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, List, Tuple
 
 import pytest
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 from ntfc.pytest.collecteditem import CollectedItem
 from ntfc.testfilter import FilterTest
 

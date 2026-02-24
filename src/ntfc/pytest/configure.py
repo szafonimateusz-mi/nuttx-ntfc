@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.envconfig import EnvConfig

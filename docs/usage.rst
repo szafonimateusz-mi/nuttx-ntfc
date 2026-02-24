@@ -93,10 +93,15 @@ Test Filtering Options:
 
   Equivalent to using ``python -m ntfc collect modules``.
 
-Report Options:
+Log Management Options:
 
-* ``--resdir PATH`` - Where to store the test results.
-  Default: ./result
+* ``--logcfg PATH`` - Path to log configuration file.
+  Default: built-in ``log.yaml`` shipped with the ntfc package.
+  When a custom file is absent all cleanup rules are disabled and
+  results are stored in ``./result``.
+
+* ``--nologs`` - When set, test logs are not saved locally and log
+  management is skipped entirely.
 
 Test Execution Options:
 
@@ -112,8 +117,6 @@ Test Execution Options:
 * ``--jsonconf PATH`` - Path to test session configuration file.
   Default: None.
   For details look at ``docs/session.json``.
-
-* ``--nologs`` - When set, test logs are not saved locally
 
 Log Notes:
 
@@ -149,6 +152,50 @@ Options:
   Default: ``./external/config.yaml``
 
 * ``--flash / --no-flash``  Flash image. Default: True.
+
+Log Management
+==============
+
+NTFC reads log configuration from the built-in ``log.yaml`` bundled
+with the ntfc package (override with ``--logcfg``).  The file controls
+where test sessions are stored and runs automatic cleanup before each
+session.
+
+Example ``log.yaml``:
+
+.. code-block:: yaml
+
+   log:
+     # Directory where test result sessions are stored
+     results_dir: "./result"
+
+     # Remove session directories older than this many days (null to disable)
+     max_age_days: 30
+
+     # Keep only this many of the latest session directories (null to disable)
+     max_count: 100
+
+     # Remove oldest session directories when total size exceeds this value
+     # in megabytes (null to disable)
+     max_size_mb: 50
+
+Session directories are named with the timestamp format
+``YYYY-MM-DD_HH-MM-SS`` (e.g. ``2025-03-01_14-30-00``).  This format is
+managed centrally by ``LogManager`` so the name is consistent regardless of
+how the session is created.
+
+Cleanup rules are applied simultaneously before a new session directory is
+created.  All three rules are evaluated independently and the union of their
+results is removed:
+
+* ``max_age_days`` — removes sessions whose last-modified timestamp is older
+  than the configured number of days.
+
+* ``max_count`` — removes the oldest sessions so that at most the configured
+  number of sessions remain.
+
+* ``max_size_mb`` — removes the oldest sessions until the total size of the
+  results directory falls within the configured limit.
 
 Signal Handlers
 ===============

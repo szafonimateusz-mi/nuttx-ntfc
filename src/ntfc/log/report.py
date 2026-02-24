@@ -30,7 +30,7 @@ from xml.etree import ElementTree
 
 from prettytable import PrettyTable
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 
 class Reporter:

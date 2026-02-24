@@ -25,7 +25,7 @@ from typing import Any, Dict
 
 import pytest
 
-from ntfc.report import Reporter
+from ntfc.log.report import Reporter
 
 ###############################################################################
 # Class: RunnerPlugin

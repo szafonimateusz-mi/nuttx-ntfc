@@ -29,7 +29,7 @@ from enum import IntEnum
 from threading import Event
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 from .getos import get_os
 

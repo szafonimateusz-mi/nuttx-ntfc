@@ -24,7 +24,7 @@ import sqlite3
 import time
 from typing import Any, List, Tuple
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 
 class DBLib:

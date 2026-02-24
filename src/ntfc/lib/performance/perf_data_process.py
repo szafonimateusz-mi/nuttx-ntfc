@@ -28,7 +28,7 @@ import time
 from typing import TYPE_CHECKING, Any, List, Tuple
 
 from ntfc.lib.performance.sqllite_lib import DBLib
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     from pathlib import Path

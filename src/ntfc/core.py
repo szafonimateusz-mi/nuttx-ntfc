@@ -34,7 +34,7 @@ from typing import (
 
 from ntfc.coreconfig import CoreConfig
 from ntfc.device.common import CmdReturn, CmdStatus
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.device.common import DeviceCommon

@@ -23,7 +23,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, List, TypeVar
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 T = TypeVar("T")
 

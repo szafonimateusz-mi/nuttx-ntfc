@@ -23,7 +23,7 @@
 from typing import Any, Dict
 
 from ntfc.coreconfig import CoreConfig
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 
 class ProductConfig:

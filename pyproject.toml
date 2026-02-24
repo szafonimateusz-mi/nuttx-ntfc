@@ -56,6 +56,9 @@ keywords = [
 [project.scripts]
 ntfc = "ntfc.cli.main:main"
 
+[tool.setuptools.package-data]
+ntfc = ["log.yaml"]
+
 [tool.black]
 line-length = 79
 target-version = ['py310']

@@ -22,7 +22,7 @@
 
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     import pytest

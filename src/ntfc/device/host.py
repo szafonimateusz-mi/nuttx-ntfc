@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, List, Optional
 import pexpect  # type: ignore
 import psutil  # type: ignore
 
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 
 from .common import DeviceCommon
 

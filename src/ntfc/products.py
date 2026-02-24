@@ -23,7 +23,7 @@
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from ntfc.device.common import CmdReturn, CmdStatus
-from ntfc.logger import logger
+from ntfc.log.logger import logger
 from ntfc.parallel import run_parallel
 
 if TYPE_CHECKING:
