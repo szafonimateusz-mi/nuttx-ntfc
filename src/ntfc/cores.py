@@ -22,7 +22,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
-    Any,
+    TYPE_CHECKING,
     Dict,
     List,
     Optional,
@@ -34,6 +34,9 @@ from ntfc.core import ProductCore
 from ntfc.device.common import CmdReturn, CmdStatus
 from ntfc.device.getdev import get_device
 from ntfc.log.logger import logger
+
+if TYPE_CHECKING:
+    from ntfc.log.handler import LogHandler
 from ntfc.parallel import run_parallel
 from ntfc.productconfig import ProductConfig
 
@@ -251,7 +254,7 @@ class CoresHandler:
         # REVISIT: how about this?
         return self.core(0).cur_core
 
-    def start_log_collect(self, logs: Dict[str, Any]) -> None:
+    def start_log_collect(self, logs: "Dict[str, LogHandler]") -> None:
         """Start log collection for all cores in parallel."""
 
         def start_log_for_core(

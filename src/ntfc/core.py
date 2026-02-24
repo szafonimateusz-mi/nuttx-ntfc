@@ -25,7 +25,6 @@ import re
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
     List,
     Optional,
     Tuple,
@@ -38,6 +37,7 @@ from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.device.common import DeviceCommon
+    from ntfc.log.handler import LogHandler
 
 ###############################################################################
 # Class: ProductCore
@@ -515,7 +515,7 @@ class ProductCore:
         """Get core configuration."""
         return self._conf
 
-    def start_log_collect(self, logs: Dict[str, Any]) -> None:
+    def start_log_collect(self, logs: "LogHandler") -> None:
         """Start device log collector."""
         self._device.start_log_collect(logs)
 

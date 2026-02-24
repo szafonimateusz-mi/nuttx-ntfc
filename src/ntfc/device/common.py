@@ -27,7 +27,7 @@ from abc import ABC, abstractmethod
 from dataclasses import astuple, dataclass
 from enum import IntEnum
 from threading import Event
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ntfc.log.logger import logger
 
@@ -35,6 +35,7 @@ from .getos import get_os
 
 if TYPE_CHECKING:
     from ntfc.coreconfig import CoreConfig
+    from ntfc.log.handler import LogHandler
 
 
 ###############################################################################
@@ -93,7 +94,7 @@ class DeviceCommon(ABC):
         self._dev = get_os(conf)
 
         # logs handler
-        self._logs: Optional[Dict[str, Any]] = None
+        self._logs: Optional[LogHandler] = None
         self._pending_device_events: list[str] = []
 
         # device health
@@ -122,14 +123,7 @@ class DeviceCommon(ABC):
         if self._logs is None:
             self._pending_device_events.append(line)
             return
-
-        log = self._logs.get("device")
-        if not log:
-            self._pending_device_events.append(line)
-            return
-
-        log.write(line)
-        log.flush()
+        self._logs.write_device(line)
 
     def _log_device_event(self, message: str) -> None:
         """Log device control/status event with timestamp."""
@@ -156,7 +150,7 @@ class DeviceCommon(ABC):
     def _console_log(self, data: bytes) -> None:
         """Log console output."""
         if self._logs is not None:  # pragma: no cover
-            self._logs["console"].write(data.decode("utf-8"))
+            self._logs.write_console(data)
 
     def _wait_for_boot(self, timeout: int = 5) -> bool:
         """Wait for device booted."""
@@ -352,15 +346,12 @@ class DeviceCommon(ABC):
         """Public hook for device event logging."""
         self._log_device_event(message)
 
-    def start_log_collect(self, logs: dict[str, Any]) -> None:
+    def start_log_collect(self, logs: "LogHandler") -> None:
         """Start device log collector."""
         self._logs = logs
         if self._pending_device_events:
-            log = self._logs.get("device")
-            if log:
-                log.writelines(self._pending_device_events)
-                log.flush()
-                self._pending_device_events.clear()
+            self._logs.writelines_device(self._pending_device_events)
+            self._pending_device_events.clear()
 
     def stop_log_collect(self) -> None:
         """Stop device log collector."""

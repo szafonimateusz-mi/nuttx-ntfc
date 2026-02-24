@@ -25,6 +25,7 @@ from typing import Any, Dict
 
 import pytest
 
+from ntfc.log.handler import LogHandler
 from ntfc.log.report import Reporter
 
 ###############################################################################
@@ -37,7 +38,7 @@ class RunnerPlugin:
 
     def __init__(self, nologs: bool = False) -> None:
         """Initialize custom pytest test runner plugin."""
-        self._logs: Dict[str, Dict[str, Any]] = {}
+        self._logs: Dict[str, Dict[str, LogHandler]] = {}
         self._nologs = nologs
 
     def _collect_device_logs_teardown(self) -> None:
@@ -50,9 +51,7 @@ class RunnerPlugin:
             product.stop_log_collect()
 
             for core in product.cores:
-                # close files
-                self._logs[product.name][core]["console"].close()
-                self._logs[product.name][core]["device"].close()
+                self._logs[product.name][core].close()
 
     def _collect_device_logs(self, request: Any) -> None:
         """Initiate device log writing into a new test file."""
@@ -72,19 +71,7 @@ class RunnerPlugin:
                 if name not in self._logs:
                     self._logs[name] = {}
 
-                if core not in self._logs[name]:
-                    os.makedirs(core_dir, exist_ok=True)
-                    self._logs[name][core] = {}
-
-                # open log files
-                tmp = os.path.join(core_dir, testname + ".console.txt")
-                self._logs[name][core]["console"] = open(
-                    tmp, "a", encoding="utf-8"
-                )
-                tmp = os.path.join(core_dir, testname + ".device.txt")
-                self._logs[name][core]["device"] = open(
-                    tmp, "a", encoding="utf-8"
-                )
+                self._logs[name][core] = LogHandler(core_dir, testname)
 
         # start logging for all products
         for product in pytest.products:

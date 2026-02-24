@@ -18,11 +18,13 @@
 #
 ############################################################################
 
-from io import StringIO
+import os
+import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from ntfc.device.common import CmdReturn, CmdStatus, DeviceCommon
+from ntfc.log.handler import LogHandler
 
 g_mock_read = b""
 
@@ -107,19 +109,28 @@ def test_device_common_send_cmd_pattern():
 
         assert dev.flood is False
 
-        log = StringIO()
-        dev.start_log_collect({"device": log, "console": log})
+        with tempfile.TemporaryDirectory() as tmpdir:
+            h = LogHandler(tmpdir, "test")
+            dev.start_log_collect(h)
 
-        g_mock_read = b"x" * 10000
-        ret = dev.send_cmd_read_until_pattern(b"", b"x", 1)
-        assert ret.status == CmdStatus.SUCCESS
+            g_mock_read = b"x" * 10000
+            ret = dev.send_cmd_read_until_pattern(b"", b"x", 1)
+            assert ret.status == CmdStatus.SUCCESS
 
-        g_mock_read = b"x" * 10000
-        ret = dev.send_cmd_read_until_pattern(b"", b"y", 1)
-        assert ret.status == CmdStatus.TIMEOUT
+            g_mock_read = b"x" * 10000
+            ret = dev.send_cmd_read_until_pattern(b"", b"y", 1)
+            assert ret.status == CmdStatus.TIMEOUT
 
-        assert dev.flood is True
-        assert "fault detected: flood" in log.getvalue()
+            assert dev.flood is True
+
+            dev.stop_log_collect()
+            h.close()
+
+            device_path = os.path.join(
+                tmpdir, "test" + LogHandler.DEVICE_SUFFIX
+            )
+            with open(device_path) as f:
+                assert "fault detected: flood" in f.read()
 
         g_mock_read = b"x" * 10000
         ret = dev.send_cmd_read_until_pattern(b"", b"y", 1)
@@ -144,37 +155,48 @@ def test_device_common_log_helpers():
         config = mockdevice.return_value
 
         dev = DeviceMock(config)
-        log = StringIO()
-        dev.start_log_collect({"device": log, "console": log})
 
-        dev._log_device_event("event")
-        dev._log_console_input(b"cmd\n")
-        dev.log_event("public")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            h1 = LogHandler(tmpdir, "batch1")
+            dev.start_log_collect(h1)
 
-        dev._log_runtime_event("reboot")
-        dev._mark_started()
-        dev._log_runtime_event("poweroff")
-        assert dev.reboot() is False
+            dev._log_device_event("event")
+            dev._log_console_input(b"cmd\n")
+            dev.log_event("public")
 
-        output = log.getvalue()
-        assert "event" in output
-        assert "console_in" in output
-        assert "public" in output
-        assert "runtime=unknown" in output
-        assert "poweroff runtime=" in output
+            dev._log_runtime_event("reboot")
+            dev._mark_started()
+            dev._log_runtime_event("poweroff")
+            assert dev.reboot() is False
 
-        dev.start_log_collect({})
-        dev._log_device_event("no-device-log")
-        dev._log_console_input(b"no-device-log")
+            dev.stop_log_collect()
+            h1.close()
 
-        dev.stop_log_collect()
-        dev._log_device_event("buffered")
-        dev._log_console_input(b"buffered-cmd")
-        dev.start_log_collect({})
-        dev.start_log_collect({"device": log, "console": log})
-        output = log.getvalue()
-        assert "buffered" in output
-        assert "buffered-cmd" in output
+            device_path = os.path.join(
+                tmpdir, "batch1" + LogHandler.DEVICE_SUFFIX
+            )
+            with open(device_path) as f:
+                output = f.read()
+            assert "event" in output
+            assert "console_in" in output
+            assert "public" in output
+            assert "runtime=unknown" in output
+            assert "poweroff runtime=" in output
+
+            dev._log_device_event("buffered")
+            dev._log_console_input(b"buffered-cmd")
+            h2 = LogHandler(tmpdir, "batch2")
+            dev.start_log_collect(h2)
+            dev.stop_log_collect()
+            h2.close()
+
+            device_path = os.path.join(
+                tmpdir, "batch2" + LogHandler.DEVICE_SUFFIX
+            )
+            with open(device_path) as f:
+                output = f.read()
+            assert "buffered" in output
+            assert "buffered-cmd" in output
 
 
 # TODO: missing tests

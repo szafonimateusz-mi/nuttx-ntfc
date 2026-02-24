@@ -22,7 +22,6 @@
 
 from typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
     List,
     Optional,
@@ -35,6 +34,7 @@ from ntfc.productconfig import ProductConfig
 if TYPE_CHECKING:
     from ntfc.core import ProductCore
     from ntfc.device.common import CmdReturn, CmdStatus
+    from ntfc.log.handler import LogHandler
 
 
 ###############################################################################
@@ -152,7 +152,7 @@ class Product:
         """Call for all cores."""
         return self._cores.cur_core
 
-    def start_log_collect(self, logs: Dict[str, Any]) -> None:
+    def start_log_collect(self, logs: "Dict[str, LogHandler]") -> None:
         """Start log collection for product."""
         self._cores.start_log_collect(logs)
 
