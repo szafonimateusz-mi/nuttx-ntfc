@@ -197,7 +197,7 @@ class ProductCore:
         :param match_all: "True" for all responses to match, "False" for any
          response to match
         :param regexp: "False" for str to match, "True" for regular
-        expression to match
+         expression to match
         :raises ValueError:
         :raises DeviceError: Communication error with device
         :raises TimeoutError: Response timeout

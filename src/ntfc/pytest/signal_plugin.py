@@ -46,11 +46,12 @@ _SENSITIVE_PATTERNS = frozenset(
 class SignalPlugin:
     """Debug signal plugin for NTFC pytest runs.
 
-    Handles:
-    - SIGUSR1: Execute device 'ps' command and print output.
+    This plugin handles the following signals:
+
+    - SIGUSR1: Execute device ``ps`` command and print output.
     - SIGUSR2: Placeholder for force panic workflow.
-    - SIGQUIT: Comprehensive debug dump (faulthandler + system/process info
-      + per-thread stacks with locals).
+    - SIGQUIT: Comprehensive debug dump (faulthandler, system/process info,
+      and per-thread stacks with locals).
     """
 
     def __init__(self) -> None:

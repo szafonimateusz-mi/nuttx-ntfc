@@ -104,7 +104,8 @@ class PytestConfigPlugin:
         fixture based on the @pytest.mark.extra_opts marker with
         --run_in_cores argument.
 
-        Usage in test:
+        Usage in test::
+
             @pytest.mark.extra_opts("--run_in_cores=cpu1,cpu2")
             def test_multi_core(core):
                 # This test will run on cpu1 and cpu2
@@ -268,7 +269,8 @@ class PytestConfigPlugin:
         This fixture is used in SMP mode to run tests on specific cores.
         It automatically switches back to the main core after the test.
 
-        Usage:
+        Usage::
+
             @pytest.mark.extra_opts("--run_in_cores=cpu1,cpu2")
             def test_multi_core(core):
                 # Test will automatically run on cpu1 and cpu2
@@ -276,10 +278,11 @@ class PytestConfigPlugin:
                 pytest.product.sendCommand("test_command")
 
         For SMP mode only:
-            - Checks if the product supports SMP
-            - Validates that the target core exists
-            - Switches to the target core before test execution
-            - Automatically switches back to main core after test
+
+        - Checks if the product supports SMP
+        - Validates that the target core exists
+        - Switches to the target core before test execution
+        - Automatically switches back to main core after test
 
         :param request: pytest request object
         :yield: None

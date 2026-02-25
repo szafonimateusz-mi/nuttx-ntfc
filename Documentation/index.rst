@@ -14,6 +14,7 @@ NTFC (NuttX Testing Framework for Community) is a testing framework designed for
    config-yaml
    session-json
    report
+   api
    roadmap
 
 Indices and tables
