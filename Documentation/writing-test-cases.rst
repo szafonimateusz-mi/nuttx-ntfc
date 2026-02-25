@@ -44,8 +44,8 @@ Located in the root of each test module directory.
 
 Fields:
 
-- ``module``: Unique module identifier. Hierarchical names use underscores (e.g.,
-  ``Nuttx_System``)
+- ``module``: Unique module identifier. Hierarchical names use underscores
+  (e.g., ``Nuttx_System``)
 - ``dependencies``: List of Python packages required by test cases
 - ``requirements``: NuttX configuration requirements. Tests skip if not met.
 
@@ -67,13 +67,13 @@ String/Value Requirements:
 .. code-block:: yaml
 
    requirements:
-     - ["CONFIG_INIT_ENTRYPOINT", "nsh_main"]  # CONFIG must equal specific value
+     - ["CONFIG_INIT_ENTRYPOINT", "nsh_main"]  # CONFIG must equal value
      - ["CONFIG_TASK_NAME_SIZE", "32"]         # CONFIG must equal value
 
 How Requirements Work:
 
 1. NTFC reads NuttX ``.config`` file from configuration
-2. Extracts configuration values
+2. Extracts configuration values via :class:`ntfc.coreconfig.CoreConfig`
 3. Compares against requirements
 4. Raise assertion if any requirement not met
 
@@ -117,7 +117,8 @@ Directory paths determine module hierarchy. For example:
 
 - ``ntfc.yaml`` module: ``Nuttx_System``
 - ``arch/test_pthread.py`` -> ``Nuttx_System_Arch``
-- ``arch/os/integration/test_syscall.py`` -> ``Nuttx_System_Arch_Os_Integration``
+- ``arch/os/integration/test_syscall.py`` ->
+  ``Nuttx_System_Arch_Os_Integration``
 
 Use this for filtering tests via ``session.json``.
 
@@ -178,7 +179,11 @@ Execute NSH command and verify output:
 Decorators:
 
 - ``@pytest.mark.cmd_check("symbol_name")``: Verify ELF symbol exists
-- ``@pytest.mark.dep_config("CONFIG_X", "CONFIG_Y")``: Skip if configs not enabled
+- ``@pytest.mark.dep_config("CONFIG_X", "CONFIG_Y")``: Skip if configs not
+  enabled
+
+The :meth:`~ntfc.products.ProductsHandler.sendCommand` method handles
+execution and verification.
 
 Parametrized Command Test
 --------------------------
@@ -202,7 +207,8 @@ Run multiple test variations:
 Dynamic Test Generation
 ------------------------
 
-Generate tests from ELF symbols (e.g., LTP tests):
+Generate tests from ELF symbols (e.g., LTP tests) using
+:class:`~ntfc.lib.elf.elf_parser.ElfParser`:
 
 .. code-block:: python
 
@@ -297,12 +303,14 @@ simultaneously, a specific device, or a specific CPU core within a device.
 Hierarchy Overview
 ------------------
 
-- ``pytest.products``: A list containing all configured ``Product`` instances.
-- ``pytest.product``: A global handler that acts as a proxy to all products.
-- ``Product``: Represents a physical or virtual device, which contains one or
-  more cores.
-- ``ProductCore``: Represents an individual CPU core (e.g., in AMP or SMP
-  systems).
+- ``pytest.products``: A list containing all configured
+  :class:`ntfc.product.Product` instances.
+- ``pytest.product``: A global handler (:class:`ntfc.products.ProductsHandler`)
+  that acts as a proxy to all products.
+- :class:`ntfc.product.Product`: Represents a physical or virtual device,
+  which contains one or more cores.
+- :class:`ntfc.core.ProductCore`: Represents an individual CPU core (e.g., in
+  AMP or SMP systems).
 
 Interaction Scopes
 ------------------
@@ -344,7 +352,7 @@ Specific Core in a Specific Product
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To target a specific CPU core (e.g., the second core of the first product), use
-the ``core()`` method.
+the :meth:`~ntfc.product.Product.core` method.
 
 .. code-block:: python
 
@@ -369,8 +377,9 @@ As a convenience for the most common case (one product, specific core),
 Command Methods
 ---------------
 
-The following methods are available on ``pytest.product``, ``Product`` instances,
-and ``ProductCore`` instances:
+The following methods are available on ``pytest.product``,
+:class:`~ntfc.product.Product` instances, and :class:`~ntfc.core.ProductCore`
+instances:
 
 .. list-table::
    :header-rows: 1
@@ -383,7 +392,7 @@ and ``ProductCore`` instances:
      - ``pytest.product.sendCommand("ls", ["root"], timeout=15)``
    * - ``sendCommandReadUntilPattern(cmd, pattern, args, timeout)``
      - Send command and read until a specific pattern is found.
-     - ``pytest.product.sendCommandReadUntilPattern("hello", "Hello", timeout=15)``
+     - ``pytest.product.sendCommandReadUntilPattern("hi", "Hi", timeout=15)``
    * - ``sendCtrlCmd(ctrl_char)``
      - Send a control character (e.g., ``"c"`` for Ctrl+C).
      - ``pytest.product.sendCtrlCmd("c")``

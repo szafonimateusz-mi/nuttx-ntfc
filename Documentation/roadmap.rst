@@ -41,7 +41,8 @@ Parallel executuon for host-based tests
 
 * Run tests for all configured products.
 
-* Running test cases on multiple threads in parallel for host-based configuration.
+* Running test cases on multiple threads in parallel for host-based
+  configuration.
   Pytest-xdist won't help here.
 
 AMP test cases
@@ -85,7 +86,8 @@ Other improvements
   At this point, a shell is required and NSH must be the entry point.
 
 * Test configuration entirely from CLI, without the need for YAML configuration?
-  Does it make sense now? Which option is better? Maybe support for both approach?
+  Does it make sense now? Which option is better?
+  Maybe support for both approach?
 
 Plugins
 =======

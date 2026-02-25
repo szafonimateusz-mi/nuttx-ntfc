@@ -33,7 +33,7 @@ todo_include_todos = True
 autosectionlabel_prefix_document = True
 
 highlight_language = "none"
-primary_domain = None
+primary_domain = "py"
 
 templates_path = ["_templates"]
 

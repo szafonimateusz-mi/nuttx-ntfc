@@ -23,7 +23,8 @@ Common initialization
 
      git clone https://github.com/apache/nuttx.git external/nuttx
      git clone https://github.com/apache/nuttx-apps.git external/nuttx-apps
-     git clone https://github.com/szafonimateusz-mi/nuttx-testing external/nuttx-testing
+     git clone https://github.com/szafonimateusz-mi/nuttx-testing \
+     external/nuttx-testing
 
 5. Cherry-pick NTFC configurations::
 

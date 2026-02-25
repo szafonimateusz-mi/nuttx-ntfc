@@ -64,7 +64,8 @@ with test case directory path.
 
 **Examples:**
 
-- Base: ``Nuttx_System``, Path: ``arch/os/integration/`` -> ``Nuttx_System_Arch_Os_Integration``
+- Base: ``Nuttx_System``, Path: ``arch/os/integration/`` ->
+  ``Nuttx_System_Arch_Os_Integration``
 - Base: ``CUSTOM``, Path: ``dir1/dir2/dir3/`` -> ``CUSTOM_Dir1_Dir2_Dir3``
 
 **Usage:**

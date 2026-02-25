@@ -83,7 +83,8 @@ Test Filtering Options:
   Equivalent to using ``python -m ntfc collect silent``.
 
 * ``-l, --list-tests`` - List all available test cases with their indexes.
-  Displays test index, name, file location, and line number in a formatted table.
+  Displays test index, name, file location, and line number in a
+  formatted table.
   Use with ``-c`` to filter by module.
 
   Equivalent to using ``python -m ntfc collect collected``.
@@ -120,12 +121,14 @@ Test Execution Options:
 
 Log Notes:
 
-* Collected logs are stored per test under ``result/<timestamp>/<product>/<core>/``.
+* Collected logs are stored per test under
+  ``result/<timestamp>/<product>/<core>/``.
   ``*.console.txt`` holds the raw console output.
 * ``*.device.txt`` captures device control/status events and includes
-  console input lines tagged as ``console_in`` to correlate commands with events.
-  Device events that happen before log collection starts are buffered and written
-  when the device log file is opened.
+  console input lines tagged as ``console_in`` to correlate commands with
+  events.
+  Device events that happen before log collection starts are buffered and
+  written when the device log file is opened.
 
 * ``--exitonfail / --no-exitonfail`` - Stop test execution on first failure.
   Default: False (continue on failure).
@@ -138,8 +141,9 @@ Log Notes:
 ~~~~~~~~~~~~~~~~~
 
 Build NuttX test image from YAML configuration and try to flash.
-Build command always rebuild configuration and at default try to
-flash image to DUT.
+This functionality is managed by the :class:`ntfc.builder.NuttXBuilder` class.
+The build command always rebuilds the configuration and by default attempts to
+flash the resulting image to the DUT.
 
 .. code-block:: bash
 
@@ -201,6 +205,8 @@ Signal Handlers
 ===============
 
 During a test run, NTFC installs custom signal handlers to aid debugging.
+This behavior is implemented in the
+:class:`ntfc.pytest.signal_plugin.SignalPlugin`.
 Send a signal to the NTFC process (use the PID printed at startup) with
 ``kill -<SIGNAL> <PID>``.
 

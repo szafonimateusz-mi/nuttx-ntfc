@@ -56,7 +56,8 @@ NTFC supports two multi-core platform types:
 
 **AMP (Asymmetric Multi-Processing)** - Default mode
 
-In AMP mode, each core has its own device instance. Tests are executed on
+In AMP mode, each core has its own device instance. This is managed by
+the :class:`ntfc.cores.CoresHandler`. Tests are executed on
 specific cores based on the core configuration. Each core operates independently
 with its own memory space and execution context.
 
@@ -83,7 +84,8 @@ Use AMP when:
 
 **SMP (Symmetric Multi-Processing)**
 
-In SMP mode, all cores share the same device instance. NTFC automatically
+In SMP mode, all cores share the same device instance, coordinated by
+the :class:`ntfc.cores.CoresHandler`. NTFC automatically
 switches between cores during test execution using the NuttX ``cu`` (call up)
 command. Tests are parametrized to run on each core sequentially.
 
@@ -130,6 +132,8 @@ Device Types
 Simulator (sim)
 ---------------
 
+This device type is implemented in :class:`ntfc.device.sim.DeviceSim`.
+
 .. code-block:: yaml
 
    cores:
@@ -141,6 +145,8 @@ Simulator (sim)
 
 QEMU
 ----
+
+This device type is implemented in :class:`ntfc.device.qemu.DeviceQemu`.
 
 .. code-block:: yaml
 
@@ -161,6 +167,7 @@ to ``exec_args``. You can also add your custom boot parameter with
 Serial Device
 -------------
 
+This device type is implemented in :class:`ntfc.device.serial.DeviceSerial`.
 For real hardware with UART communication:
 
 .. code-block:: yaml
@@ -253,6 +260,8 @@ Example usage with ``st-flash`` tool:
 Product Configuration Fields
 ============================
 
+These fields are parsed by :class:`ntfc.productconfig.ProductConfig`.
+
 .. list-table::
    :header-rows: 1
 
@@ -261,12 +270,15 @@ Product Configuration Fields
    * - ``name``
      - Product identifier
    * - ``platform``
-     - Platform type: ``amp`` (default) or ``smp``. See `Platform Types`_ section
+     - Platform type: ``amp`` (default) or ``smp``.
+       See `Platform Types`_ section
    * - ``cores``
      - List of product cores (core0, core1, etc.)
 
 Core Configuration Fields
 =========================
+
+These fields are parsed by :class:`ntfc.coreconfig.CoreConfig`.
 
 .. list-table::
    :header-rows: 1

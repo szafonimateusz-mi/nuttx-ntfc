@@ -2,7 +2,8 @@
 Welcome to NTFC's documentation!
 ================================
 
-NTFC (NuttX Testing Framework for Community) is a testing framework designed for NuttX.
+NTFC (NuttX Testing Framework for Community) is a testing framework designed
+for NuttX.
 
 .. toctree::
    :maxdepth: 1
