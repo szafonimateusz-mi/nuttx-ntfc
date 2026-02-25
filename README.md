@@ -78,7 +78,18 @@ NTFC requires Python 3.10 or later (not tested with older Python).
 - pytest-html - for HTML test reports
 - pytest-json - for JSON test reports
 
-## Usage
+## Documentation
+
+Documentation is available in the `Documentation/` directory. You can build
+the HTML documentation using Sphinx:
+
+```bash
+pip install -r Documentation/requirements.txt
+cd Documentation
+make html
+```
+
+The generated HTML will be available in `Documentation/_build/html/index.html`.
 
 See [Documentation/quickstart](Documentation/quickstart.rst) for a quick start guide
 and [Documentation/usage](Documentation/usage.rst) for detailed usage information.
