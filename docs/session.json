@@ -10,7 +10,7 @@
         [
             "Nuttx_System_Arch_Os_Performance"
         ],
-        "order": [                                   // force test modules order, not supported yet
+        "order": [                                   // force test modules order
             {
                 "module": "Nuttx_System_Gdb",
                 "value": "1"

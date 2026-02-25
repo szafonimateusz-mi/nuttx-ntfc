@@ -28,10 +28,27 @@ and argument overrides. Path to test session configuration file is passed with
 
 **Fields:**
 
-- **include_module**: Modules to include (empty = include all)
-- **exclude_module**: Modules to exclude
-- **order**: Force execution order (not supported yet)
-- **args.kv**: Configuration overrides (not supported yet)
+- ``include_module``: Modules to include (empty = include all)
+
+- ``exclude_module``: Modules to exclude
+
+- ``order``: Force execution order. Specifies a list of objects with ``module``
+  and ``value``.
+
+  Tests are grouped by their order value:
+
+  - Positive values (e.g., "1", "2"): Placed at the beginning of the test
+    session. Lower values come first.
+
+  - Unspecified: Placed in the middle.
+
+  - Negative values (e.g., "-1", "-2"): Placed at the end. Higher absolute
+    values come last (e.g., -1 comes before -2).
+
+  - Multiple modules with the same order value follow their original
+    discovery (FIFO) order.
+
+- ``args.kv``: Configuration overrides (not supported yet)
 
 Module Name Generation
 ======================

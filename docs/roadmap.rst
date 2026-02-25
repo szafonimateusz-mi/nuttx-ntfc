@@ -47,9 +47,6 @@ Parallel executuon for host-based tests
 AMP test cases
 ==============
 
-* Separate general product logic from product core logic.
-  Required to handle AMP cases.
-
 * Support for AMP test cases for host-based simulations (rpmsg).
 
 Devices
@@ -81,8 +78,6 @@ Other improvements
 * Improve ntfc.yaml handling:
 
   - Detect module configuration in parent dir
-
-* Force execution order for tests.
 
 * Migrate session.json to yaml file so we can drop json dependency.
 

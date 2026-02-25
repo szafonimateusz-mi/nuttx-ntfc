@@ -21,7 +21,7 @@
 """NTFC collector plugin for pytest."""
 
 import os
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import pytest
 
@@ -129,6 +129,34 @@ class CollectorPlugin:
     def pytest_collection_finish(self, session: pytest.Session) -> None:
         """Pytest collection finish callback."""
 
+    def _filter_modules(
+        self, ci: CollectedItem, include: List[str], exclude: List[str]
+    ) -> Tuple[bool, str]:
+        """Filter modules based on include/exclude lists."""
+        if include and ci.module2 not in include:
+            return True, "not in include_module"
+
+        if exclude and ci.module2 in exclude:
+            return True, "excluded module"
+
+        return False, ""
+
+    def _order_items(
+        self, items: List[pytest.Item], order_map: Dict[str, int]
+    ) -> List[pytest.Item]:
+        """Order test items based on the order map."""
+
+        def sort_key(test_item: pytest.Item) -> Tuple[int, int]:
+            v = order_map.get(test_item._collected.module2)
+            if v is None:
+                return (1, 0)
+            if v > 0:
+                return (0, v)
+            # v < 0
+            return (2, v)
+
+        return sorted(items, key=sort_key)
+
     def pytest_collection_modifyitems(
         self,
         config: pytest.Config,
@@ -144,44 +172,38 @@ class CollectorPlugin:
         module = pytest.cfgtest.get("module", {})
         include_module = module.get("include_module", [])
         exclude_module = module.get("exclude_module", [])
-        # order_module = module.get("order", [])
+        order_list = module.get("order", [])
+        order_map = {
+            e["module"]: int(e["value"])
+            for e in order_list
+            if e.get("module") and e.get("value") is not None
+        }
 
         for item in items:
-
-            # get collected data and attach to item
             ci = self._collected_item(item)
             item._collected = ci
-            # add to all items
             self._all_items.append(ci)
 
             skip, reason = self._filter.check_test_support(item)
+            if not skip:
+                skip, reason = self._filter_modules(
+                    ci, include_module, exclude_module
+                )
 
             if skip:
-                skip_reason: str = reason or "unknown reason"
+                skip_reason = reason or "unknown reason"
                 self._skipped_items.append((item, skip_reason))
                 item.add_marker(pytest.mark.skip(reason=skip_reason))
                 continue
 
-            # check if we match to include_module
-            if include_module:
-                if ci.module2 not in include_module:
-                    reason = "not in include_module"
-                    self._skipped_items.append((item, reason))
-                    item.add_marker(pytest.mark.skip(reason=reason))
-                    continue
-
-            # excluded modules
-            if ci.module2 in exclude_module:
-                reason = "excluded module"
-                self._skipped_items.append((item, reason))
-                item.add_marker(pytest.mark.skip(reason=reason))
-                continue
-
-            # include the test if not skipped
             self._filtered_items.append(ci)
             tmp.append(item)
 
-        # TODO: force modules order
+        if order_map:
+            tmp = self._order_items(tmp, order_map)
+
+        # Update filtered items list to match new order
+        self._filtered_items = [item._collected for item in tmp]
 
         # overwrite items
         items[:] = tmp
