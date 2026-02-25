@@ -42,19 +42,19 @@ Located in the root of each test module directory.
      - ["CONFIG_SYSTEM_NSH", True]
      - ["CONFIG_INIT_ENTRYPOINT", "nsh_main"]
 
-**Fields:**
+Fields:
 
-- **module**: Unique module identifier. Hierarchical names use underscores (e.g.,
+- ``module``: Unique module identifier. Hierarchical names use underscores (e.g.,
   ``Nuttx_System``)
-- **dependencies**: List of Python packages required by test cases
-- **requirements**: NuttX configuration requirements. Tests skip if not met.
+- ``dependencies``: List of Python packages required by test cases
+- ``requirements``: NuttX configuration requirements. Tests skip if not met.
 
 Configuration Requirements
 ===========================
 
 Requirements are specified as ``[config_key, expected_value]`` pairs.
 
-**Boolean Requirements:**
+Boolean Requirements:
 
 .. code-block:: yaml
 
@@ -62,7 +62,7 @@ Requirements are specified as ``[config_key, expected_value]`` pairs.
      - ["CONFIG_DEBUG_SYMBOLS", True]          # CONFIG must be enabled
      - ["CONFIG_DEBUG_FEATURES", False]        # CONFIG must be disabled
 
-**String/Value Requirements:**
+String/Value Requirements:
 
 .. code-block:: yaml
 
@@ -70,14 +70,14 @@ Requirements are specified as ``[config_key, expected_value]`` pairs.
      - ["CONFIG_INIT_ENTRYPOINT", "nsh_main"]  # CONFIG must equal specific value
      - ["CONFIG_TASK_NAME_SIZE", "32"]         # CONFIG must equal value
 
-**How Requirements Work:**
+How Requirements Work:
 
 1. NTFC reads NuttX ``.config`` file from configuration
 2. Extracts configuration values
 3. Compares against requirements
 4. Raise assertion if any requirement not met
 
-**Example:**
+Example:
 
 Module requires NSH (NuttX Shell) as entry point:
 
@@ -128,15 +128,15 @@ Pytest Configuration (conftest.py)
 for test modules. It can use pytest hooks to dynamically generate test cases and
 modify test collection.
 
-**Common Uses:**
+Common Uses:
 
-1. **Dynamic test generation** from ELF symbols (e.g., LTP tests)
-2. **Test case filtering** based on blacklists, skip lists, crash lists
-3. **Custom timeout management** for specific tests
-4. **Test parameter management** (expected outputs, test variations)
-5. **Setup/teardown logic** using fixtures
+1. Dynamic test generation from ELF symbols (e.g., LTP tests)
+2. Test case filtering based on blacklists, skip lists, crash lists
+3. Custom timeout management for specific tests
+4. Test parameter management (expected outputs, test variations)
+5. Setup/teardown logic using fixtures
 
-**Key Pytest Hooks:**
+Key Pytest Hooks:
 
 .. list-table::
    :header-rows: 1
@@ -175,7 +175,7 @@ Execute NSH command and verify output:
        ret = pytest.product.sendCommand(cmd, expected, timeout=15)
        assert ret == 0
 
-**Decorators:**
+Decorators:
 
 - ``@pytest.mark.cmd_check("symbol_name")``: Verify ELF symbol exists
 - ``@pytest.mark.dep_config("CONFIG_X", "CONFIG_Y")``: Skip if configs not enabled
@@ -224,11 +224,11 @@ Available Fixtures and Marks
 
 NTFC provides built-in fixtures and pytest marks for test development.
 
-**Built-in Fixtures:**
+Built-in Fixtures:
 
 TODO
 
-**Custom Fixtures:**
+Custom Fixtures:
 
 Define setup/teardown fixtures for test preparation:
 
@@ -250,7 +250,7 @@ Define setup/teardown fixtures for test preparation:
        ret = pytest.product.sendCommand("test", ["PASS"], timeout=15)
        assert ret == 0
 
-**Available Marks:**
+Available Marks:
 
 .. list-table::
    :header-rows: 1
@@ -277,7 +277,7 @@ Define setup/teardown fixtures for test preparation:
      - Skip test conditionally
      - ``@pytest.mark.skip(reason="not ready")``
 
-**Example - Test Repetition:**
+Example - Test Repetition:
 
 .. code-block:: python
 
@@ -287,10 +287,90 @@ Define setup/teardown fixtures for test preparation:
        ret = pytest.product.sendCommand("test", ["PASS"], timeout=15)
        assert ret == 0
 
-Product and Command Methods
-===========================
+Interaction with Products and Cores
+===================================
 
-``pytest.product`` provides methods to interact with the device:
+NTFC provides several ways to interact with the devices under test (DUTs).
+Depending on the test scenario, you might want to send commands to all devices
+simultaneously, a specific device, or a specific CPU core within a device.
+
+Hierarchy Overview
+------------------
+
+- ``pytest.products``: A list containing all configured ``Product`` instances.
+- ``pytest.product``: A global handler that acts as a proxy to all products.
+- ``Product``: Represents a physical or virtual device, which contains one or
+  more cores.
+- ``ProductCore``: Represents an individual CPU core (e.g., in AMP or SMP
+  systems).
+
+Interaction Scopes
+------------------
+
+All Products and All Cores
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To execute a command on every configured product and every core within those
+products simultaneously, use ``pytest.product``. Commands are executed in
+parallel across products.
+
+.. code-block:: python
+
+   # Sends 'ls' to all cores of all products in parallel
+   ret = pytest.product.sendCommand("ls", ["nsh"])
+   assert ret == 0
+
+Consequences: If any product or core fails to meet the expectations, the
+return status will indicate failure. This is the most common way to write
+generic tests.
+
+All Cores in a Specific Product
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you have multiple products (e.g., a gateway and a sensor) and only want to
+interact with one of them, use the ``pytest.products`` list.
+
+.. code-block:: python
+
+   # Interact only with the first product
+   product0 = pytest.products[0]
+   product0.sendCommand("help")
+
+   # Interact only with the second product
+   product1 = pytest.products[1]
+   product1.sendCommand("ifconfig")
+
+Specific Core in a Specific Product
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To target a specific CPU core (e.g., the second core of the first product), use
+the ``core()`` method.
+
+.. code-block:: python
+
+   # Target Core 1 (second core) of Product 0
+   core = pytest.products[0].core(1)
+   core.sendCommand("ps")
+
+Consequences: This bypasses the parallel execution logic of the product
+handler and communicates directly with the specified core's device interface.
+
+Shortcut for First Product's Core
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+As a convenience for the most common case (one product, specific core),
+``pytest.product.core(n)`` proxies to the first product's core.
+
+.. code-block:: python
+
+   # Shortcut for pytest.products[0].core(0)
+   pytest.product.core(0).sendCommand("free")
+
+Command Methods
+---------------
+
+The following methods are available on ``pytest.product``, ``Product`` instances,
+and ``ProductCore`` instances:
 
 .. list-table::
    :header-rows: 1
@@ -298,9 +378,15 @@ Product and Command Methods
    * - Method
      - Description
      - Example
-   * - ``sendCommand(cmd, expected, timeout)``
-     - Send command and wait for expected response
+   * - ``sendCommand(cmd, expects, args, timeout, ...)``
+     - Send command and wait for expected response (list or regex).
      - ``pytest.product.sendCommand("ls", ["root"], timeout=15)``
    * - ``sendCommandReadUntilPattern(cmd, pattern, args, timeout)``
-     - Send command to device and read until a specific pattern
-     - ``pytest.product.sendCommandReadUntilPattern("hello", ["Hello"], timeout=15)``
+     - Send command and read until a specific pattern is found.
+     - ``pytest.product.sendCommandReadUntilPattern("hello", "Hello", timeout=15)``
+   * - ``sendCtrlCmd(ctrl_char)``
+     - Send a control character (e.g., ``"c"`` for Ctrl+C).
+     - ``pytest.product.sendCtrlCmd("c")``
+   * - ``reboot(timeout)``
+     - Reboot the target(s).
+     - ``pytest.product.reboot()``
