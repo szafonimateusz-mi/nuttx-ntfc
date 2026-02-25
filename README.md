@@ -80,8 +80,8 @@ NTFC requires Python 3.10 or later (not tested with older Python).
 
 ## Usage
 
-See [docs/quickstart](docs/quickstart.rst) for a quick start guide
-and [docs/usage](docs/usage.rst) for detailed usage information.
+See [Documentation/quickstart](Documentation/quickstart.rst) for a quick start guide
+and [Documentation/usage](Documentation/usage.rst) for detailed usage information.
 
 ### Preparing the Image for Testing
 
@@ -98,11 +98,11 @@ Currently available test case repositories:
   functionality tests
 
 For guidance on writing your own test cases, see
-[docs/writing-test-cases](docs/writing-test-cases.rst).
+[Documentation/writing-test-cases](Documentation/writing-test-cases.rst).
 
 ## Contributing
 
 To get started with developing NTFC, see
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The roadmpa for the project can be found in [ROADMAP](docs/roadmap.rst).
+The roadmpa for the project can be found in [ROADMAP](Documentation/roadmap.rst).

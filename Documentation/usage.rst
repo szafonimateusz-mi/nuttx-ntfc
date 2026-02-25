@@ -112,11 +112,11 @@ Test Execution Options:
 * ``--confpath PATH`` - Path to test configuration file.
   Can be also set with environmentvariable ``NTFC_CONFPATH``.
   Default: ``./external/config.yaml``
-  For details look at ``docs/config.yaml``.
+  For details look at ``Documentation/config.yaml``.
 
 * ``--jsonconf PATH`` - Path to test session configuration file.
   Default: None.
-  For details look at ``docs/session.json``.
+  For details look at ``Documentation/session.json``.
 
 Log Notes:
 
@@ -135,7 +135,7 @@ Log Notes:
 * ``--flash`` - Flash image. Default: False.
 
 ``build`` command
-----------------
+~~~~~~~~~~~~~~~~~
 
 Build NuttX test image from YAML configuration and try to flash.
 Build command always rebuild configuration and at default try to

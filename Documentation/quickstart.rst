@@ -74,7 +74,7 @@ Automatic build and Flash
 =========================
 
 For ``NUCLEO-H743ZI`` there is availalbe configuration that automatically
-build, flash and test image ::
+build, flash and test image:
 
 1. Build image and flash::
 
