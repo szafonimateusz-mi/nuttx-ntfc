@@ -21,6 +21,7 @@
 from unittest.mock import patch
 
 from ntfc.device.nuttx import DeviceNuttx
+from ntfc.device.state import CrashType
 
 
 def test_device_nuttx_init():
@@ -37,7 +38,10 @@ def test_device_nuttx_init():
         assert d.poweroff_cmd is not None
         assert d.reboot_cmd is not None
         assert d.uname_cmd is not None
-        assert d.crash_keys is not None
+
+        sigs = d.crash_signatures
+        assert CrashType.ASSERTION in sigs
+        assert all(isinstance(v, list) for v in sigs.values())
 
         config.kv_check.return_value = 0
         assert d.panic_char == ""

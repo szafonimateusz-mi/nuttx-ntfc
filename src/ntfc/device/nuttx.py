@@ -20,7 +20,9 @@
 
 """NuttX target device implementation."""
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Dict, List
+
+from ntfc.device.state import CrashType
 
 from .oscommon import OSCommon
 
@@ -42,7 +44,14 @@ class DeviceNuttx(OSCommon):
     _REBOOT_CMD = b"reboot"
     _UNAME_CMD = b"uname -o"
     _UNAME_RESP = b"NuttX"
-    _CRASH_KEYS = [b"Assertion"]
+    _CRASH_SIGNATURES: Dict[CrashType, List[bytes]] = {
+        CrashType.ASSERTION: [
+            b"Assertion failed",
+            b"Reset board on recursive assert",
+            b"up_dump_register",
+            b"dump_tasks",
+        ],
+    }
     _PANIC_CHAR = r"/"
 
     def __init__(self, conf: "CoreConfig"):
@@ -85,9 +94,9 @@ class DeviceNuttx(OSCommon):
         return self._UNAME_CMD
 
     @property
-    def crash_keys(self) -> List[bytes]:
-        """Get keys related to OS crash."""
-        return self._CRASH_KEYS
+    def crash_signatures(self) -> Dict[CrashType, List[bytes]]:
+        """Get crash signatures grouped by crash type."""
+        return self._CRASH_SIGNATURES
 
     @property
     def panic_char(self) -> str:

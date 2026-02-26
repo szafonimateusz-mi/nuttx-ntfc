@@ -21,7 +21,10 @@
 """OS abstraction."""
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import TYPE_CHECKING, Dict, List
+
+if TYPE_CHECKING:
+    from ntfc.device.state import CrashType
 
 ###############################################################################
 # Class: OSCommon
@@ -63,8 +66,8 @@ class OSCommon(ABC):
 
     @property
     @abstractmethod
-    def crash_keys(self) -> List[bytes]:
-        """Get keys related to OS crash."""
+    def crash_signatures(self) -> "Dict[CrashType, List[bytes]]":
+        """Get crash signatures grouped by crash type."""
 
     @property
     @abstractmethod

@@ -26,9 +26,9 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import astuple, dataclass
 from enum import IntEnum
-from threading import Event
 from typing import TYPE_CHECKING, Any, Optional
 
+from ntfc.device.state import DeviceState, DeviceStateManager
 from ntfc.log.logger import logger
 
 from .getos import get_os
@@ -98,10 +98,10 @@ class DeviceCommon(ABC):
         self._pending_device_events: list[str] = []
 
         # device health
-        self._crash = Event()
-        self._busy_loop = Event()
-        self._flood = Event()
-        self._busy_loop_last = 0.0
+        self._state_mgr = DeviceStateManager(
+            busyloop_threshold=float(self._BUSY_LOOP_TIMEOUT),
+            crash_signatures=self._dev.crash_signatures,
+        )
         self.clear_fault_flags()
 
         self._read_all_sleep = 0.1
@@ -186,28 +186,22 @@ class DeviceCommon(ABC):
             time_now = time.time()
 
             # check for any sign of system crash
-            if any(
-                key in output for key in self._dev.crash_keys
-            ):  # pragma: no cover
-                logger.info("Assertion detected! Set crash flag")
-                if not self._crash.is_set():
-                    self._log_device_event("fault detected: crash")
-                self._crash.set()
+            if self._state_mgr.check_crash(output):  # pragma: no cover
+                logger.info("Crash detected!")
+                self._log_device_event("fault detected: crash")
                 break
 
             # check for busy loop
             # trigger an error if there was no data to read for a long time
             if not chunk:
-                if self._busy_loop_last and (
-                    time_now - self._busy_loop_last > self._BUSY_LOOP_TIMEOUT
-                ):  # pragma: no cover
-                    self._busy_loop_last = 0
-                    if not self._busy_loop.is_set():
-                        self._log_device_event("fault detected: busyloop")
-                    self._busy_loop.set()
+                if (  # pragma: no cover
+                    not self._state_mgr.is_busy_loop()
+                    and self._state_mgr.check_busy_loop_timeout()
+                ):
+                    self._log_device_event("fault detected: busyloop")
                     break
             else:
-                self._busy_loop_last = time_now
+                self._state_mgr.update_activity()
 
             # check for timeout
             if time_now > end_time:
@@ -227,17 +221,7 @@ class DeviceCommon(ABC):
         """Check if the serial device is OK."""
         if not self._dev_is_health_priv():
             return False
-
-        if self._crash.is_set():
-            return False
-
-        if self._busy_loop.is_set():
-            return False
-
-        if self._flood.is_set():
-            return False
-
-        return True
+        return not self._state_mgr.is_unhealthy()
 
     def send_command(self, cmd: bytes | str, timeout: int = 1) -> bytes:
         """Send command to the device and get the response."""
@@ -327,9 +311,9 @@ class DeviceCommon(ABC):
         if ret == CmdStatus.TIMEOUT:
             chunk = self._read_all(0.1)
             if len(chunk) > 0:
-                if not self._flood.is_set():
+                if not self._state_mgr.is_unhealthy():
                     self._log_device_event("fault detected: flood")
-                self._flood.set()
+                self._state_mgr.set_unhealthy("Flood detected")
             output_all += chunk
             self._console_log(chunk)
 
@@ -359,9 +343,7 @@ class DeviceCommon(ABC):
 
     def clear_fault_flags(self) -> None:
         """Clear fault flags."""
-        self._crash.clear()
-        self._flood.clear()
-        self._busy_loop.clear()
+        self._state_mgr.reset_all_states()
 
     def _system_cmd(self, cmd: str) -> None:  # pragma: no cover
         logger.info(f"system command: {cmd}")
@@ -386,17 +368,17 @@ class DeviceCommon(ABC):
     @property
     def busyloop(self) -> bool:
         """Check if the device is in busy loop."""
-        return self._busy_loop.is_set()
+        return self._state_mgr.is_busy_loop()
 
     @property
     def flood(self) -> bool:
         """Check if the device is in flood state."""
-        return self._flood.is_set()
+        return self._state_mgr.get_current_state() == DeviceState.UNHEALTHY
 
     @property
     def crash(self) -> bool:
         """Check if the device is crashed."""
-        return self._crash.is_set()
+        return self._state_mgr.is_crashed()
 
     @property
     def panic_char(self) -> str:
