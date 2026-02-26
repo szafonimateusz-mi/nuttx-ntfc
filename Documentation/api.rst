@@ -16,13 +16,13 @@ Core Modules
    ntfc.coreconfig
    ntfc.cores
    ntfc.envconfig
-   ntfc.logger
+   ntfc.log.logger
    ntfc.parallel
    ntfc.plugins_loader
    ntfc.product
    ntfc.productconfig
    ntfc.products
-   ntfc.report
+   ntfc.log.report
    ntfc.testfilter
 
 Device Interface
