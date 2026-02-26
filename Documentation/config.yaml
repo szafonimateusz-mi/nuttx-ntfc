@@ -33,8 +33,8 @@ product:                          # many products can be supported in tests (pro
       flash: ''                   # (optional) flash command if NTFC is used for flashing
       reboot: ''                  # (optional) System command to reset DUT, eg 'st-flash reset'
       dcmake:                     # (optional) Defines passed to CMake build
-        - ["DEFINE1", "VALUE1"]
-        - ["DEFINE2", "VALUE2"]
+        DEFINE1: "VALUE1"
+        DEFINE2: "VALUE2"
       build_env:                  # (optional) env vars passed to cmake for this core (overrides config.build_env)
         CC: ''                    # example: gcc-14
         CXX: ''                   # example: g++-14

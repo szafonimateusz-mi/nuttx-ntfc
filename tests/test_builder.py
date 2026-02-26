@@ -110,3 +110,35 @@ def test_builder_ignores_invalid_build_env_types() -> None:
     b = NuttXBuilder(config)
 
     assert b._get_build_env(config["product"]["cores"]["core0"]) == {}
+
+
+def test_builder_supports_dcmake_dict_syntax() -> None:
+    config = copy.deepcopy(conf_dir)
+    config["product"]["cores"]["core0"]["defconfig"] = "dummy/path"
+    config["product"]["cores"]["core0"]["dcmake"] = {
+        "CCACHE": "ON",
+        "SOME_NUMBER": 1,
+    }
+
+    calls = []
+
+    def run_command_capture(cmd, env):
+        calls.append((cmd, env))
+
+    b = NuttXBuilder(config)
+    b._run_command = run_command_capture
+    b._make_dir = builder_make_dir_dummy
+
+    b.build_all()
+
+    cmake_cmd = calls[0][0]
+    assert "-DBOARD_CONFIG=dummy/path" in cmake_cmd
+    assert "-DCCACHE=ON" in cmake_cmd
+    assert "-DSOME_NUMBER=1" in cmake_cmd
+
+
+def test_builder_get_cmake_defines_ignores_invalid_type() -> None:
+    b = NuttXBuilder(copy.deepcopy(conf_dir))
+    assert b._get_cmake_defines({"dcmake": "A=1"}, "defcfg") == {
+        "BOARD_CONFIG": "defcfg"
+    }

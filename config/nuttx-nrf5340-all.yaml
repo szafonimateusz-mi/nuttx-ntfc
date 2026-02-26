@@ -16,7 +16,7 @@ product0:
       reboot: 'nrfutil device reset --core application'
       prompt: 'nsh-cpuapp>'
       dcmake:
-        - ["CMAKE_POLICY_VERSION_MINIMUM", "3.5"]
+        CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
     core1:
       name: 'cpunet'
@@ -30,4 +30,4 @@ product0:
       reboot: 'nrfutil device reset --core network'
       prompt: 'nsh-cpunet>'
       dcmake:
-        - ["CMAKE_POLICY_VERSION_MINIMUM", "3.5"]
+        CMAKE_POLICY_VERSION_MINIMUM: "3.5"

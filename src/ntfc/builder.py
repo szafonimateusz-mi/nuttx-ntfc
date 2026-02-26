@@ -76,6 +76,24 @@ class NuttXBuilder:
 
         return build_env
 
+    def _get_cmake_defines(
+        self, core_cfg: Dict[str, Any], build_cfg: str
+    ) -> Dict[str, str]:
+        """Collect CMake defines for a core.
+
+        YAML syntax is a mapping:
+        - dcmake: { KEY: VALUE }
+        """
+        defines = {"BOARD_CONFIG": build_cfg}
+        custom_defines = core_cfg.get("dcmake", {})
+
+        if isinstance(custom_defines, dict):
+            defines.update(
+                {str(key): str(val) for key, val in custom_defines.items()}
+            )
+
+        return defines
+
     def _run_cmake(
         self,
         source: str,
@@ -166,11 +184,7 @@ class NuttXBuilder:
                 already_build = True  # pragma: no cover
 
             # get defines passed to cmake
-            defines = {"BOARD_CONFIG": build_cfg}
-            custom_defines = cores[core].get("dcmake", [])
-
-            for d in custom_defines:
-                defines[d[0]] = d[1]  # pragma: no cover
+            defines = self._get_cmake_defines(cores[core], build_cfg)
 
             build_env = self._get_build_env(cores[core])
 

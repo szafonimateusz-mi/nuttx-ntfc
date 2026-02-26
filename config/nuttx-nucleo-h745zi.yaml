@@ -15,7 +15,7 @@ product:
       flash: 'st-flash write $IMAGE_BIN 0x08000000'
       reboot: 'st-flash reset'
       dcmake:
-        - ["CMAKE_POLICY_VERSION_MINIMUM", "3.5"]
+        CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
     core1:
       name: 'cm4'
@@ -26,5 +26,4 @@ product:
       flash: 'st-flash write $IMAGE_BIN 0x08100000'
       reboot: 'st-flash reset'
       dcmake:
-        - ["CMAKE_POLICY_VERSION_MINIMUM", "3.5"]
-
+        CMAKE_POLICY_VERSION_MINIMUM: "3.5"

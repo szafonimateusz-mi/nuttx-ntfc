@@ -205,8 +205,10 @@ You can specify additional defines passed to CMake with:
 .. code-block:: yaml
 
    dcmake:
-     - ["DEFINE1", "VALUE1"]
-     - ["DEFINE2", "VALUE2"]
+     DEFINE1: "VALUE1"
+     DEFINE2: "VALUE2"
+
+``dcmake`` uses the same YAML mapping style as ``build_env`` (``KEY: VALUE``).
 
 You can also pass environment variables to the build process (CMake configure
 and ``cmake --build``), for example to select a specific compiler version:
@@ -330,7 +332,8 @@ These fields are parsed by :class:`ntfc.coreconfig.CoreConfig`.
    * - ``reboot``
      - System command to reboot device
    * - ``dcmake``
-     - Defines passed to CMake build
+     - Defines passed to CMake build (YAML mapping syntax, e.g.
+       ``FEATURE_X: ON``)
    * - ``build_env``
      - Environment variables passed to CMake configure/build for this core.
        Overrides ``config.build_env`` keys when both are set
