@@ -18,6 +18,7 @@
 #
 ############################################################################
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -131,3 +132,57 @@ def test_load_config_files_empty_directory():
         ctx = MockEnvironment(tmpdir)
         with pytest.raises(IOError):
             load_config_files(ctx)
+
+
+def test_load_config_files_json_args_override_and_add():
+    """JSON session args override YAML config values and add new ones."""
+    yaml_file = "./tests/resources/nuttx/sim/config.yaml"
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False
+    ) as tmpjson:
+        json.dump(
+            {
+                "module": {},
+                "args": {
+                    "timeout": 321,
+                    "new_option": "from_json",
+                    "loops": 7,
+                },
+            },
+            tmpjson,
+        )
+        json_path = tmpjson.name
+
+    try:
+        ctx = MockEnvironment(yaml_file)
+        ctx.jsonconf = json_path
+        conf, conf_json = load_config_files(ctx)
+
+        assert conf_json["args"]["timeout"] == 321
+        assert conf["config"]["timeout"] == 321
+        assert conf["config"]["new_option"] == "from_json"
+        assert conf["config"]["loops"] == 7
+    finally:
+        Path(json_path).unlink()
+
+
+def test_load_config_files_json_args_ignored_if_not_object():
+    """Non-object JSON args does not modify YAML config."""
+    yaml_file = "./tests/resources/nuttx/sim/config.yaml"
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False
+    ) as tmpjson:
+        json.dump({"args": ["timeout", 100]}, tmpjson)
+        json_path = tmpjson.name
+
+    try:
+        ctx = MockEnvironment(yaml_file)
+        ctx.jsonconf = json_path
+        conf, _conf_json = load_config_files(ctx)
+
+        assert conf["config"]["loops"] == 1
+        assert "timeout" not in conf["config"]
+    finally:
+        Path(json_path).unlink()

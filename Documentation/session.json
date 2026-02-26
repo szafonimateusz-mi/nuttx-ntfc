@@ -21,7 +21,11 @@
             }
         ]
     },
-    "args": {                                        // overwrite configuration
-        "kv": []                                     //
+    "args": {                                        // override/add keys in YAML config: section
+        "timeout": 600,                              // overrides config.timeout
+        "timeout_session": 7200,                     // overrides config.timeout_session
+        "loops": 3,                                  // overrides config.loops
+        "custom_option": "value",                    // adds new config option if absent
+        "kv": []                                     // reserved, not implemented yet
     }
 }

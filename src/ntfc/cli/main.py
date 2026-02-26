@@ -274,6 +274,10 @@ def load_config_files(  # noqa: C901
         with open(ctx.jsonconf, "r", encoding="utf-8") as f:
             conf_json = json.load(f)
 
+    json_args = conf_json.get("args", {})
+    if isinstance(json_args, Mapping):
+        conf["config"] = update_nested_dict(conf.get("config", {}), json_args)
+
     if ctx.verbose:
         print_yaml_config(conf)
         print_json_config(conf_json)

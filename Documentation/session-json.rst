@@ -22,6 +22,10 @@ and argument overrides. Path to test session configuration file is passed with
        "order": []
      },
      "args": {
+       "timeout": 600,
+       "timeout_session": 7200,
+       "loops": 3,
+       "custom_option": "value",
        "kv": []
      }
    }
@@ -48,7 +52,15 @@ and argument overrides. Path to test session configuration file is passed with
   - Multiple modules with the same order value follow their original
     discovery (FIFO) order.
 
-- ``args.kv``: Configuration overrides (not supported yet)
+- ``args``: Optional configuration overrides for the YAML ``config`` section.
+  Keys in ``args`` override existing YAML values. New keys are added if they
+  do not exist in YAML.
+
+  Example: ``"args": {"timeout": 600}`` overrides ``config.timeout`` from
+  ``config.yaml``.
+
+- ``args.kv``: Reserved for future configuration override logic (not
+  implemented yet). Keep it as an empty list for forward compatibility.
 
 Module Name Generation
 ======================
@@ -96,3 +108,24 @@ Exclude specific modules:
        ]
      }
    }
+
+Override YAML config options for one test session:
+
+.. code-block:: json
+
+   {
+     "module": {
+       "include_module": [],
+       "exclude_module": [],
+       "order": []
+     },
+     "args": {
+       "timeout": 600,
+       "timeout_session": 7200,
+       "loops": 3,
+       "kv": []
+     }
+   }
+
+This overrides values from ``config.yaml`` ``config`` section (for example
+``config.timeout``) only for the current session.
