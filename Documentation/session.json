@@ -26,6 +26,9 @@
         "timeout_session": 7200,                     // overrides config.timeout_session
         "loops": 3,                                  // overrides config.loops
         "custom_option": "value",                    // adds new config option if absent
-        "kv": []                                     // reserved, not implemented yet
+        "kv": {                                      // overrides global config.kv for this session
+            "CONFIG_DEBUG_FEATURES": "y",
+            "CONFIG_IDLETHREAD_STACKSIZE": "4096"
+        }
     }
 }

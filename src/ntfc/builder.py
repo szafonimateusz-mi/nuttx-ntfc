@@ -21,6 +21,8 @@
 """Build manager for NuttX configuration."""
 
 import os
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +36,9 @@ class NuttXBuilder:
 
     IMAGE_BIN_STR = "$IMAGE_BIN"
     IMAGE_HEX_STR = "$IMAGE_HEX"
+    _KCONFIG_DISABLED_RE = re.compile(
+        r"^#\s+(CONFIG_[A-Za-z0-9_]+)\s+is not set"
+    )
 
     def __init__(self, config: Dict[str, Any], rebuild: bool = True):
         """Initialize NuttX builder."""
@@ -93,6 +98,202 @@ class NuttXBuilder:
             )
 
         return defines
+
+    def _get_kconfig_overrides(
+        self, core_cfg: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Collect Kconfig overrides from global and per-core YAML.
+
+        Precedence:
+        - ``config.kv`` (global defaults)
+        - ``<product>.cores.<core>.kv`` (per-core overrides)
+        """
+        merged: Dict[str, Any] = {}
+
+        global_kv = self._cfg_values.get("config", {}).get("kv", {})
+        merged.update(self._valid_kconfig_overrides(global_kv))
+
+        if core_cfg is not None:
+            core_kv = core_cfg.get("kv", {})
+            merged.update(self._valid_kconfig_overrides(core_kv))
+
+        return merged
+
+    def _valid_kconfig_overrides(self, overrides: Any) -> Dict[str, Any]:
+        """Normalize Kconfig overrides to ``{CONFIG: value}`` mapping.
+
+        Preferred syntax is a mapping. Legacy list-of-pairs is still accepted.
+        """
+        valid_overrides: Dict[str, Any] = {}
+
+        if isinstance(overrides, dict):
+            valid_overrides.update(
+                {
+                    str(key): value
+                    for key, value in overrides.items()
+                    if isinstance(key, str)
+                }
+            )
+            return valid_overrides
+
+        if isinstance(overrides, list):
+            for item in overrides:
+                if (
+                    isinstance(item, list)
+                    and len(item) == 2
+                    and isinstance(item[0], str)
+                ):
+                    valid_overrides[item[0]] = item[1]
+
+        return valid_overrides
+
+    def _find_kconfig_tweak(self, _cfg_cwd: str) -> Optional[str]:
+        """Find ``kconfig-tweak`` tool in PATH."""
+        return shutil.which("kconfig-tweak")
+
+    def _run_kconfig_tweak_cmd(self, cmd: List[str]) -> None:
+        """Run one ``kconfig-tweak`` command."""
+        subprocess.run(cmd, check=True)
+
+    def _build_kconfig_tweak_cmd(
+        self, tool: str, conf_path: str, key: str, value: Any
+    ) -> List[str]:
+        """Build one ``kconfig-tweak`` command for a Kconfig override."""
+        cmd = [tool, "--file", conf_path]
+        if value is False or value == "n":
+            cmd.extend(["--disable", key])
+        elif value is True or value == "y":
+            cmd.extend(["--enable", key])
+        elif value == "m":
+            cmd.extend(["--module", key])
+        elif isinstance(value, int):
+            cmd.extend(["--set-val", key, str(value)])
+        elif isinstance(value, str):
+            if value.startswith('"') and value.endswith('"'):
+                cmd.extend(["--set-str", key, value[1:-1]])
+            elif value.startswith("0x") or value.isdigit():
+                cmd.extend(["--set-val", key, value])
+            else:
+                cmd.extend(["--set-str", key, value])
+        else:
+            cmd.extend(["--set-str", key, str(value)])
+
+        return cmd
+
+    def _apply_kconfig_overrides_kconfig_tweak(
+        self, conf_path: str, valid_overrides: Dict[str, Any], cfg_cwd: str
+    ) -> bool:
+        """Apply overrides with ``kconfig-tweak`` if available."""
+        tool = self._find_kconfig_tweak(cfg_cwd)
+        if not tool:
+            logger.error(
+                "kconfig-tweak is required to apply 'kv' configuration "
+                "overrides during build. Install it and ensure it is in PATH."
+            )
+            raise AssertionError(
+                "kconfig-tweak is required for 'kv' build overrides"
+            )
+
+        for key, value in valid_overrides.items():
+            cmd = self._build_kconfig_tweak_cmd(tool, conf_path, key, value)
+
+            try:
+                self._run_kconfig_tweak_cmd(cmd)
+            except (OSError, subprocess.CalledProcessError):
+                return False
+
+        return True
+
+    def _format_kconfig_line(self, key: str, value: Any) -> str:
+        """Format one Kconfig assignment/comment line."""
+        if value is False:
+            return f"# {key} is not set\n"
+
+        if value is True:
+            return f"{key}=y\n"
+
+        if isinstance(value, int):
+            return f"{key}={value}\n"
+
+        if isinstance(value, str):
+            if value == "n":
+                return f"# {key} is not set\n"
+            if value in ("y", "m"):
+                return f"{key}={value}\n"
+            if value.startswith('"') and value.endswith('"'):
+                return f"{key}={value}\n"
+            if value.startswith("0x") or value.isdigit():
+                return f"{key}={value}\n"
+            return f'{key}="{value}"\n'
+
+        return f'{key}="{value}"\n'
+
+    def _apply_kconfig_overrides(
+        self, conf_path: str, overrides: Dict[str, Any], cfg_cwd: str = ""
+    ) -> None:
+        """Apply Kconfig overrides to generated ``.config``."""
+        if not overrides:
+            return
+
+        try:
+            with open(conf_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except FileNotFoundError:  # pragma: no cover
+            return
+
+        if cfg_cwd:
+            ok = self._apply_kconfig_overrides_kconfig_tweak(
+                conf_path, overrides, cfg_cwd
+            )
+            assert (
+                ok
+            ), "failed to apply 'kv' build overrides with kconfig-tweak"
+            return
+
+        replaced: set[str] = set()
+        updated_lines: List[str] = []
+        for line in lines:
+            replaced_line = self._replace_kconfig_line(
+                line, overrides, replaced, updated_lines
+            )
+            if not replaced_line:
+                updated_lines.append(line)
+
+        for key, value in overrides.items():
+            if key not in replaced:
+                updated_lines.append(self._format_kconfig_line(key, value))
+
+        with open(conf_path, "w", encoding="utf-8") as f:
+            f.writelines(updated_lines)
+
+    def _replace_kconfig_line(
+        self,
+        line: str,
+        overrides: Dict[str, Any],
+        replaced: set[str],
+        updated_lines: List[str],
+    ) -> bool:
+        """Replace one existing Kconfig line if it matches an override."""
+        disabled_match = self._KCONFIG_DISABLED_RE.match(line)
+
+        for key, value in overrides.items():
+            if line.startswith(f"{key}=") or (
+                disabled_match and disabled_match.group(1) == key
+            ):
+                updated_lines.append(self._format_kconfig_line(key, value))
+                replaced.add(key)
+                return True
+
+        return False
+
+    def _log_kconfig_overrides(self, overrides: Dict[str, Any]) -> None:
+        """Log Kconfig override list at build start."""
+        if not overrides:
+            return
+
+        logger.info("Applying Kconfig overrides before build:")
+        for key, value in overrides.items():
+            logger.info(f"  {key} = {value}")
 
     def _run_cmake(
         self,
@@ -187,8 +388,11 @@ class NuttXBuilder:
             defines = self._get_cmake_defines(cores[core], build_cfg)
 
             build_env = self._get_build_env(cores[core])
+            kv_overrides = self._get_kconfig_overrides(cores[core])
 
             if not already_build or self._rebuild:  # pragma: no cover
+                self._log_kconfig_overrides(kv_overrides)
+
                 # configure build
                 self._run_cmake(
                     source=nuttx_dir,
@@ -196,6 +400,11 @@ class NuttXBuilder:
                     generator="Ninja",
                     defines=defines,
                     env=build_env,
+                )
+
+                # apply Kconfig overrides to generated .config before build
+                self._apply_kconfig_overrides(
+                    nuttx_conf_path, kv_overrides, cfg_cwd
                 )
 
                 # build

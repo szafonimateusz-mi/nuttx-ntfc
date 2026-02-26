@@ -232,6 +232,39 @@ and ``cmake --build``), for example to select a specific compiler version:
          build_env:              # optional per-core override
            CXX: g++-14
 
+You can override Kconfig values in the generated ``.config`` before building
+with global ``config.kv`` entries and optional per-core ``kv`` entries:
+
+.. code-block:: yaml
+
+   config:
+     cwd: './external'
+     build_dir: './build'
+     kv:
+       CONFIG_DEBUG_FEATURES: "y"
+       CONFIG_IDLETHREAD_STACKSIZE: "4096"
+       CONFIG_BOARD_CUSTOM_NAME: "my-board"
+
+   product:
+     name: "product"
+     cores:
+       core0:
+         kv:
+           CONFIG_DEBUG_FEATURES: "n"     # overrides global
+           CONFIG_BOARD_CORE0_ONLY: "y"   # core-only option
+
+Global ``config.kv`` values are applied first, then ``cores.<core>.kv``.
+Per-core entries override the same keys from ``config.kv``.
+
+JSON session ``args.kv`` (if provided) overrides the global ``config.kv``
+layer, while per-core ``kv`` still keeps highest priority.
+
+``kv`` uses the same YAML/JSON mapping style as ``dcmake`` and ``args``
+(``KEY: VALUE``).
+
+These overrides are applied after CMake configure creates ``.config`` and
+before ``cmake --build`` starts.
+
 Build directory and path to NuttX repositories must be specified in global
 configuration section:
 
@@ -243,6 +276,9 @@ configuration section:
     build_env:               # Optional env vars for cmake configure/build
       CC: gcc-14
       CXX: g++-14
+    kv:                      # Optional Kconfig overrides before build
+      CONFIG_EXAMPLE: "y"
+      CONFIG_NAME: "value"
 
 Use when:
 
@@ -337,3 +373,6 @@ These fields are parsed by :class:`ntfc.coreconfig.CoreConfig`.
    * - ``build_env``
      - Environment variables passed to CMake configure/build for this core.
        Overrides ``config.build_env`` keys when both are set
+   * - ``kv``
+     - Per-core Kconfig overrides applied before build. Overrides matching
+       keys from global ``config.kv``

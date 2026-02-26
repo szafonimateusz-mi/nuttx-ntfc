@@ -148,6 +148,7 @@ def test_load_config_files_json_args_override_and_add():
                     "timeout": 321,
                     "new_option": "from_json",
                     "loops": 7,
+                    "kv": {"CONFIG_FOO": "y"},
                 },
             },
             tmpjson,
@@ -163,6 +164,7 @@ def test_load_config_files_json_args_override_and_add():
         assert conf["config"]["timeout"] == 321
         assert conf["config"]["new_option"] == "from_json"
         assert conf["config"]["loops"] == 7
+        assert conf["config"]["kv"] == {"CONFIG_FOO": "y"}
     finally:
         Path(json_path).unlink()
 

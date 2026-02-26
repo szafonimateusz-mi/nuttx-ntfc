@@ -26,7 +26,7 @@ and argument overrides. Path to test session configuration file is passed with
        "timeout_session": 7200,
        "loops": 3,
        "custom_option": "value",
-       "kv": []
+       "kv": {}
      }
    }
 
@@ -59,8 +59,9 @@ and argument overrides. Path to test session configuration file is passed with
   Example: ``"args": {"timeout": 600}`` overrides ``config.timeout`` from
   ``config.yaml``.
 
-- ``args.kv``: Reserved for future configuration override logic (not
-  implemented yet). Keep it as an empty list for forward compatibility.
+- ``args.kv``: Optional Kconfig overrides for the global ``config.kv`` layer
+  from ``config.yaml`` for the current session. Uses the same mapping syntax
+  as YAML ``config.kv``. Per-core ``kv`` in YAML still has higher priority.
 
 Module Name Generation
 ======================
@@ -123,7 +124,10 @@ Override YAML config options for one test session:
        "timeout": 600,
        "timeout_session": 7200,
        "loops": 3,
-       "kv": []
+       "kv": {
+         "CONFIG_DEBUG_FEATURES": "y",
+         "CONFIG_IDLETHREAD_STACKSIZE": "4096"
+       }
      }
    }
 
