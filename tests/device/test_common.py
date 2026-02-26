@@ -140,7 +140,9 @@ def test_device_common_send_cmd_pattern():
 def test_device_common_panic_char():
 
     with patch("ntfc.device.common.get_os") as mock_get_os:
-        mock_get_os.return_value = SimpleNamespace(panic_char="X")
+        mock_get_os.return_value = SimpleNamespace(
+            panic_char="X", crash_signatures={}
+        )
 
         with patch("ntfc.envconfig.EnvConfig") as mockdevice:
             config = mockdevice.return_value
