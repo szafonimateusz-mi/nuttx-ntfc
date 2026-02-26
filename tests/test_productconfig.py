@@ -248,3 +248,42 @@ def test_product_config_platform_properties():
     assert p_smp.platform == "smp"
     assert p_smp.is_smp is True
     assert p_smp.is_amp is False
+
+
+def test_product_config_debug_defaults():
+    """Test that debug config defaults to all-disabled when section absent."""
+    conf = {
+        "name": "product",
+        "cores": {"core0": {"name": "main", "device": "sim"}},
+    }
+    p = ProductConfig(conf)
+    assert p.debug.coredump.enable is False
+    assert p.debug.coredump.collection_type == "auto"
+    assert p.debug.coredump.limit == 5
+    assert p.debug.gdb.enable is False
+    assert p.debug.gdb.force_panic is False
+
+
+def test_product_config_debug_full():
+    """Test ProductConfig parses a fully specified debug section."""
+    conf = {
+        "name": "product",
+        "cores": {"core0": {"name": "main", "device": "sim"}},
+        "debug": {
+            "coredump": {
+                "enable": True,
+                "type": "ymodem",
+                "limit": 3,
+            },
+            "gdb": {
+                "enable": True,
+                "force_panic": True,
+            },
+        },
+    }
+    p = ProductConfig(conf)
+    assert p.debug.coredump.enable is True
+    assert p.debug.coredump.collection_type == "ymodem"
+    assert p.debug.coredump.limit == 3
+    assert p.debug.gdb.enable is True
+    assert p.debug.gdb.force_panic is True
