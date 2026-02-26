@@ -208,6 +208,28 @@ You can specify additional defines passed to CMake with:
      - ["DEFINE1", "VALUE1"]
      - ["DEFINE2", "VALUE2"]
 
+You can also pass environment variables to the build process (CMake configure
+and ``cmake --build``), for example to select a specific compiler version:
+
+.. code-block:: yaml
+
+   config:
+     cwd: './external'
+     build_dir: './build'
+     build_env:
+       CC: gcc-14
+       CXX: g++-14
+
+   product:
+     name: "product"
+     cores:
+       core0:
+         name: 'main'
+         device: 'serial'
+         defconfig: 'boards/arm/stm32h7/nucleo-h743zi/configs/ntfc'
+         build_env:              # optional per-core override
+           CXX: g++-14
+
 Build directory and path to NuttX repositories must be specified in global
 configuration section:
 
@@ -216,6 +238,9 @@ configuration section:
   config:
     cwd: './external'
     build_dir: './build'     # Build output directory
+    build_env:               # Optional env vars for cmake configure/build
+      CC: gcc-14
+      CXX: g++-14
 
 Use when:
 
@@ -306,3 +331,6 @@ These fields are parsed by :class:`ntfc.coreconfig.CoreConfig`.
      - System command to reboot device
    * - ``dcmake``
      - Defines passed to CMake build
+   * - ``build_env``
+     - Environment variables passed to CMake configure/build for this core.
+       Overrides ``config.build_env`` keys when both are set

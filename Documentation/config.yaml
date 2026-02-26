@@ -1,6 +1,9 @@
 config:                           # common, global configuration options
   cwd: ''                         # path of work directory. eg: /home/work
   build_dir: ''                   # (optional) path to build directory when NTFC is used for building
+  build_env:                      # (optional) env vars passed to cmake configure/build for all cores
+    CC: ''                        # example: gcc-14
+    CXX: ''                       # example: g++-14
   timeout: 120                    # timeout per test case. Defaults to 120
   timeout_session: 2400           # timeout per session. Defaults to 2400
   loops: 1                        # specify the number of times to run each testcase. Defaults to 1
@@ -32,6 +35,9 @@ product:                          # many products can be supported in tests (pro
       dcmake:                     # (optional) Defines passed to CMake build
         - ["DEFINE1", "VALUE1"]
         - ["DEFINE2", "VALUE2"]
+      build_env:                  # (optional) env vars passed to cmake for this core (overrides config.build_env)
+        CC: ''                    # example: gcc-14
+        CXX: ''                   # example: g++-14
 
 
     core1:                        # (optional) Aux core 1  AMP test cases)

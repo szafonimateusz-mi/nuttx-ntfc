@@ -53,6 +53,29 @@ class NuttXBuilder:
         """Create dir."""
         os.makedirs(path, exist_ok=True)
 
+    def _get_build_env(self, core_cfg: Dict[str, Any]) -> Dict[str, str]:
+        """Collect build environment variables for a core.
+
+        Supports YAML fields:
+        - config.build_env: shared env for all builds
+        - <product>.cores.<core>.build_env: per-core overrides
+        """
+        build_env: Dict[str, str] = {}
+
+        global_env = self._cfg_values.get("config", {}).get("build_env", {})
+        if isinstance(global_env, dict):
+            build_env.update(
+                {str(key): str(val) for key, val in global_env.items()}
+            )
+
+        core_env = core_cfg.get("build_env", {})
+        if isinstance(core_env, dict):
+            build_env.update(
+                {str(key): str(val) for key, val in core_env.items()}
+            )
+
+        return build_env
+
     def _run_cmake(
         self,
         source: str,
@@ -149,6 +172,8 @@ class NuttXBuilder:
             for d in custom_defines:
                 defines[d[0]] = d[1]  # pragma: no cover
 
+            build_env = self._get_build_env(cores[core])
+
             if not already_build or self._rebuild:  # pragma: no cover
                 # configure build
                 self._run_cmake(
@@ -156,10 +181,11 @@ class NuttXBuilder:
                     build=build_path,
                     generator="Ninja",
                     defines=defines,
+                    env=build_env,
                 )
 
                 # build
-                self._run_build(build_path)
+                self._run_build(build_path, env=build_env)
 
             # add elf and conf path
             cores[core]["elf_path"] = nuttx_elf_path
