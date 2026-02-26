@@ -219,6 +219,53 @@ def test_main_test_debug(runner, monkeypatch):
     assert result.exit_code == 0
 
 
+def test_main_test_rebuild_default_and_override(runner, monkeypatch):
+    seen = []
+
+    def fake_load_config_files(ctx):
+        seen.append(ctx.rebuild)
+        return (
+            {
+                "config": {"cwd": "./", "loops": 1},
+                "product": {"name": "p", "cores": {"core0": {"name": "c"}}},
+            },
+            {},
+        )
+
+    class DummyPytest:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+    monkeypatch.setattr(
+        "ntfc.cli.main.load_config_files", fake_load_config_files
+    )
+    monkeypatch.setattr("ntfc.cli.main.MyPytest", DummyPytest)
+    monkeypatch.setattr(
+        "ntfc.cli.main.collect_run", lambda *_args, **_kwargs: None
+    )
+
+    args = [
+        "test",
+        "--collect-only",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
+    ]
+    result = runner.invoke(main, args)
+    assert result.exit_code == 0
+
+    args = [
+        "test",
+        "--collect-only",
+        "--no-rebuild",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
+    ]
+    result = runner.invoke(main, args)
+    assert result.exit_code == 0
+
+    assert seen == [True, False]
+
+
 def test_main_test_modules(runner, monkeypatch):
     monkeypatch.setattr(
         "ntfc.pytest.mypytest.MyPytest._device_start",

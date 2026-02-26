@@ -56,8 +56,8 @@ _testenv_options = (
         envvar="NTFC_TESTPATH",
     ),
     click.option(
-        "--rebuild",
-        is_flag=True,
+        "--rebuild/--no-rebuild",
+        default=True,
         help="Always rebuild configuration. Default: True",
     ),
 )
