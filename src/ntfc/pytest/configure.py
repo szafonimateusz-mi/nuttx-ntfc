@@ -78,6 +78,9 @@ class PytestConfigPlugin:
                 result_dir, "pytest.debug.log"
             )
             config.option.log_file_level = "DEBUG"
+            config.option.log_file_format = (
+                "%(asctime)s.%(msecs)03d %(levelname)s %(name)s:%(message)s"
+            )
             config.option.log_file_date_format = "%Y-%m-%d %H:%M:%S"
             config.option.log_file_mode = "a"
 
