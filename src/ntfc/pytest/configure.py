@@ -79,6 +79,7 @@ class PytestConfigPlugin:
             )
             config.option.log_file_level = "DEBUG"
             config.option.log_file_date_format = "%Y-%m-%d %H:%M:%S"
+            config.option.log_file_mode = "a"
 
         # custom markers (equivalent of markers= section)
         markers = [
