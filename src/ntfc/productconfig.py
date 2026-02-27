@@ -23,6 +23,7 @@
 from typing import Any, Dict
 
 from ntfc.coreconfig import CoreConfig
+from ntfc.debug.config import DebugConfig
 from ntfc.log.logger import logger
 
 
@@ -39,6 +40,9 @@ class ProductConfig:
         # Use dictionary to store cores, key is core name from config
         self._cores: Dict[str, CoreConfig] = {}
         self._init_cores()
+
+        # Debug configuration (optional section)
+        self._debug = DebugConfig(self._config.get("debug", {}))
 
     def _init_cores(self) -> None:
         """Initialize cores dictionary from configuration."""
@@ -203,3 +207,8 @@ class ProductConfig:
     def is_amp(self) -> bool:
         """Check if platform is AMP."""
         return self._platform == "amp"
+
+    @property
+    def debug(self) -> DebugConfig:
+        """Return debug configuration."""
+        return self._debug
