@@ -35,7 +35,7 @@ def test_pytest_configure_log_file_uses_result_dir(
     config_dummy, monkeypatch, tmp_path
 ):
     """Test pytest_configure sets log_file inside result_dir when available."""
-    monkeypatch.setattr(pytest, "result_dir", str(tmp_path))
+    monkeypatch.setattr(pytest, "result_dir", str(tmp_path), raising=False)
 
     plugin = PytestConfigPlugin(config_dummy)
     mock_config = MagicMock()
@@ -51,7 +51,7 @@ def test_pytest_configure_no_log_file_without_result_dir(
     config_dummy, monkeypatch
 ):
     """Test pytest_configure skips log_file when result_dir is not set."""
-    monkeypatch.setattr(pytest, "result_dir", "")
+    monkeypatch.setattr(pytest, "result_dir", "", raising=False)
 
     plugin = PytestConfigPlugin(config_dummy)
     mock_config = MagicMock()

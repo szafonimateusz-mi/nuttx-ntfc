@@ -21,6 +21,7 @@
 """NTFC plugin for pytest."""
 
 import importlib.util
+import json
 import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
@@ -54,6 +55,7 @@ class MyPytest:
     """Custom wrapper for pytest."""
 
     NTFC_YAML_FILE = "ntfc.yaml"
+    SESSION_CONFIG_FILE = "session.config.txt"
 
     def __init__(
         self,
@@ -108,6 +110,13 @@ class MyPytest:
         # add our custom pytest plugin
         self._plugins.append(self._ptconfig)
         self._plugins.append(SignalPlugin())
+
+    def _write_session_config(self, result_dir: str) -> None:
+        """Write resolved session configuration into result directory."""
+        path = os.path.join(result_dir, self.SESSION_CONFIG_FILE)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self._config.config, f, indent=2, sort_keys=True)
+            f.write("\n")
 
     def _kv_validate(
         self, product: Product, core: int
@@ -277,6 +286,7 @@ class MyPytest:
             log_manager = LogManager(result.get("logcfg"))
             log_manager.cleanup()
             pytest.result_dir = log_manager.new_session_dir()
+            self._write_session_config(pytest.result_dir)
 
             # always include HTML and XML report if logs enabled
             path = os.path.join(pytest.result_dir, "report.html")

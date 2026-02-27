@@ -154,3 +154,17 @@ def test_runner_run_exitcode(config_dummy, device_dummy):
         # test directory - should fail due to test_fail.py
         path = "./tests/resources/tests_exitcode/"
         assert p.runner(path, {}) == 1
+
+
+def test_write_session_config_file(config_dummy, tmp_path):
+    p = MyPytest(config_dummy)
+
+    p._write_session_config(str(tmp_path))
+
+    path = tmp_path / "session.config.txt"
+    assert path.is_file()
+
+    with open(path, "r", encoding="utf-8") as f:
+        merged = json.load(f)
+
+    assert merged == config_dummy
