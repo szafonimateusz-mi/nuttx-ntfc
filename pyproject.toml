@@ -57,7 +57,7 @@ keywords = [
 ntfc = "ntfc.cli.main:main"
 
 [tool.setuptools.package-data]
-ntfc = ["log.yaml"]
+ntfc = ["log.yaml", "log/templates/*.html"]
 
 [tool.black]
 line-length = 79
