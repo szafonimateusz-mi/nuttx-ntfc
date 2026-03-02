@@ -186,7 +186,7 @@ def tests_run(pt: "MyPytest", ctx: Any) -> Any:
     print("=" * 100 + "\n")
 
     # Convert selected tests to pytest node IDs
-    selected_nodeids = [item.nodeid for item in selected_tests]
+    selected_nodeids = [item.nodeid_abs for item in selected_tests]
 
     # Update test collection to only run selected tests
     return pt.runner(

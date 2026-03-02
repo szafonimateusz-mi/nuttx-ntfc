@@ -22,14 +22,15 @@ from ntfc.pytest.collecteditem import CollectedItem
 
 
 def test_collector_collected_item():
-    c = CollectedItem("a", "b", "c", "d", "e", "f", "U", "/aaa/bbb/ccc.py")
+    c = CollectedItem("a", "b", "c", "d", "e", "f::f", "U", "/aaa/bbb/ccc.py")
 
     assert c.directory == "a"
     assert c.module == "b"
     assert c.name == "c"
     assert c.path == "d"
     assert c.line == "e"
-    assert c.nodeid == "f"
+    assert c.nodeid == "f::f"
+    assert c.nodeid_abs == "d::f"
     assert c.module2 == "U_Aaa_Bbb"
 
     print(c)

@@ -46,6 +46,7 @@ class CollectedItem:
         self._path = path
         self._line = line
         self._nodeid = nodeid
+        self._nodeid_abs = self._path + "::" + self._nodeid.split("::")[1]
 
         tmp = "_".join(part.capitalize() for part in root.split("/")[:-1])
         if tmp and tmp[0] != "_":
@@ -92,3 +93,8 @@ class CollectedItem:
     def nodeid(self) -> str:
         """Get collected item node ID."""
         return self._nodeid
+
+    @property
+    def nodeid_abs(self) -> str:
+        """Get collected item node ID with absolute path."""
+        return self._nodeid_abs

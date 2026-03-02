@@ -24,8 +24,8 @@ from ntfc.pytest.collecteditem import CollectedItem
 
 def test_collected():
 
-    c1 = CollectedItem("a", "b", "c", "d", "e", "f", "U", "aaa/bbb/ccc1.py")
-    c2 = CollectedItem("a", "b", "c", "d", "e", "f", "U", "aaa/bbb/ccc2.py")
+    c1 = CollectedItem("a", "b", "c", "d", "e", "f::f", "U", "aaa/bbb/ccc1.py")
+    c2 = CollectedItem("a", "b", "c", "d", "e", "f::f", "U", "aaa/bbb/ccc2.py")
     items = [c1, c2]
     skipped = [(None, "xxx"), (None, "yyy"), (None, "zzz")]
 
