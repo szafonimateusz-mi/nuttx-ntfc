@@ -60,10 +60,11 @@ class DeviceMock(DeviceCommon):
     def notalive(self):
         """Mock."""
 
-    def _poweroff_impl(self):
+    def _poweroff_impl(self) -> bool:
         """Mock."""
+        return False
 
-    def _reboot_impl(self, _):
+    def _reboot_impl(self, timeout: int) -> bool:
         """Mock."""
         return False
 
@@ -170,6 +171,7 @@ def test_device_common_log_helpers():
             dev._mark_started()
             dev._log_runtime_event("poweroff")
             assert dev.reboot() is False
+            assert dev.poweroff() is False
 
             dev.stop_log_collect()
             h1.close()

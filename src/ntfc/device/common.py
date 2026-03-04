@@ -417,18 +417,39 @@ class DeviceCommon(ABC):
     def notalive(self) -> bool:
         """Check if the device is dead."""
 
-    def poweroff(self) -> None:
-        """Poweroff the device."""
-        self._log_runtime_event("poweroff")
-        self._poweroff_impl()
+    def poweroff(self, hard: bool = True) -> bool:
+        """Poweroff the device.
 
-    def reboot(self, timeout: int = 1) -> bool:
-        """Reboot the device."""
+        :param hard: (bool) If True use hardware poweroff (system command for
+         serial devices, process restart for host devices). If False use
+         software poweroff (OS shell command). Default is True.
+        :return: (bool) True if the poweroff was successful, False otherwise.
+        """
+        self._log_runtime_event("poweroff")
+        if not hard:
+            self.send_command(self._dev.poweroff_cmd)
+            return True
+        return self._poweroff_impl()
+
+    def reboot(self, timeout: int = 1, hard: bool = True) -> bool:
+        """Reboot the device.
+
+        :param timeout: (int) Timeout in seconds for the reboot operation.
+        :param hard: (bool) If True use hardware reboot (system command for
+         serial devices, process restart for host devices). If False use
+         software reboot (OS shell command). Default is True.
+        :return: (bool) True if the reboot was successful, False otherwise.
+        """
         self._log_runtime_event("reboot")
         self._log_device_event(f"reboot timeout={timeout}s")
+        if not hard:
+            self.send_command(self._dev.reboot_cmd)
+            self._mark_started()
+            return self._wait_for_boot(timeout)
         success = self._reboot_impl(timeout)
         if success:
             self._mark_started()
+            success = self._wait_for_boot(timeout)
         return success
 
     @abstractmethod
@@ -436,9 +457,16 @@ class DeviceCommon(ABC):
         """Start device implementation."""
 
     @abstractmethod
-    def _poweroff_impl(self) -> None:
-        """Poweroff device implementation."""
+    def _poweroff_impl(self) -> bool:
+        """Hardware poweroff device implementation.
+
+        :return: (bool) True on success, False otherwise.
+        """
 
     @abstractmethod
     def _reboot_impl(self, timeout: int) -> bool:
-        """Reboot device implementation."""
+        """Hardware reboot device implementation.
+
+        :param timeout: (int) Timeout in seconds.
+        :return: (bool) True on success, False otherwise.
+        """

@@ -45,7 +45,7 @@ class DeviceHost2(DeviceHost):
             self._child.send(b"\n\n")
 
 
-def test_device_host_open(envconfig_dummy):
+def test_device_host_open(envconfig_dummy, monkeypatch):
 
     conf = envconfig_dummy.product[0].cfg_core(0)
     path = "./tests/resources/nuttx/sim/nuttx"
@@ -84,8 +84,18 @@ def test_device_host_open(envconfig_dummy):
     # reopen
     assert dev._dev_reopen() is not None
 
-    assert dev.poweroff() is None
+    # hard poweroff/reboot: restart host process -> True
+    assert dev.poweroff() is True
     assert dev.reboot(1) is True
+
+    # soft reboot: patch _wait_for_boot since sim restart timing is
+    # non-deterministic; the real boot wait is tested separately
+    monkeypatch.setattr(dev, "_wait_for_boot", lambda t=5: True)
+    assert dev.reboot(1, hard=False) is True
+    monkeypatch.undo()
+
+    # soft poweroff: sends OS command, no boot wait required
+    assert dev.poweroff(hard=False) is True
 
     # close executable
     dev.host_close()
@@ -99,8 +109,8 @@ def test_device_host_open(envconfig_dummy):
     assert ret is not None
     assert dev.notalive is False
 
-    def dummy():
-        pass
+    def dummy(hard: bool = True) -> bool:
+        return True
 
     dev.poweroff = dummy
     dev.host_close()
@@ -162,6 +172,20 @@ def test_device_host_reboot_failure(envconfig_dummy, monkeypatch):
 
     monkeypatch.setattr(dev, "_dev_reopen", lambda: None)
     assert dev.reboot(1) is False
+
+
+def test_device_host_reboot_boot_wait_failure(envconfig_dummy, monkeypatch):
+
+    conf = envconfig_dummy.product[0].cfg_core(0)
+    dev = DeviceHost2(conf)
+
+    # hard: _dev_reopen succeeds but device never comes back up
+    monkeypatch.setattr(dev, "_dev_reopen", lambda: object())
+    monkeypatch.setattr(dev, "_wait_for_boot", lambda t=5: False)
+    assert dev.reboot(1) is False
+
+    # soft: command sent but device never comes back up
+    assert dev.reboot(1, hard=False) is False
 
 
 # TODO: more tests for host device !!!!

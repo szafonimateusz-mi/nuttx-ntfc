@@ -146,8 +146,8 @@ class DeviceHost(DeviceCommon):
             raise IOError("Host device not ready")
 
         if self._child.isalive():  # pragma: no cover
-            # send power off
-            self.poweroff()
+            # send power off via software (OS command) to avoid recursion
+            self.poweroff(hard=False)
             time.sleep(1)
 
         if self._child.isalive():  # pragma: no cover
@@ -170,11 +170,18 @@ class DeviceHost(DeviceCommon):
             return True
         return not self._child.isalive()
 
-    def _poweroff_impl(self) -> None:
-        """Poweroff the device implementation."""
-        self.send_command(self._dev.poweroff_cmd)
+    def _poweroff_impl(self) -> bool:
+        """Hardware poweroff: restart the host process via ``_dev_reopen``.
+
+        :return: (bool) True on success, False otherwise.
+        """
+        return bool(self._dev_reopen())
 
     def _reboot_impl(self, timeout: int) -> bool:
-        """Reboot the device implementation."""
+        """Hardware reboot: restart the host process via ``_dev_reopen``.
+
+        :param timeout: (int) Unused for host devices.
+        :return: (bool) True on success, False otherwise.
+        """
         del timeout
         return bool(self._dev_reopen())

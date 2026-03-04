@@ -120,8 +120,17 @@ def test_device_sim_init(serial_config, serial_pair):
     g_fake_device_retval = b""
     assert ser._write(b"a") is None
     assert ser._write_ctrl("a") is None
+
+    # hard reboot/poweroff: no system command configured -> False
     assert ser.reboot() is False
-    assert ser.poweroff() is None
+    assert ser.poweroff() is False
+
+    # soft reboot: device must respond with prompt for boot wait to succeed
+    g_fake_device_retval = b"\n\rnsh>"
+    assert ser.reboot(hard=False) is True
+
+    # soft poweroff: sends OS command, no boot wait required
+    assert ser.poweroff(hard=False) is True
 
     stop.set()
     device_thread.join(timeout=1)

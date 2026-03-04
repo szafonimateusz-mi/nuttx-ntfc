@@ -166,19 +166,29 @@ class DeviceSerial(DeviceCommon):
             return True
         return False
 
-    def _poweroff_impl(self) -> None:
-        """Poweroff the device implementation."""
-        print("TODO: poweroff")  # pragma: no cover
+    def _poweroff_impl(self) -> bool:
+        """Hardware poweroff: run the system poweroff command from config.
+
+        :return: (bool) True on success, False if no poweroff command
+         configured.
+        """
+        if self._conf.poweroff:  # pragma: no cover
+            logger.info("poweroff core")
+            self._system_cmd(self._conf.poweroff)
+            self.clear_fault_flags()
+            return True
+        return False
 
     def _reboot_impl(self, timeout: int = 1) -> bool:
-        """Reboot the device implementation."""
+        """Hardware reboot: run the system reboot command from config.
+
+        :param timeout: (int) Unused for serial devices.
+        :return: (bool) True on success, False if no reboot command
+         configured.
+        """
         if self._conf.reboot:  # pragma: no cover
             logger.info("reboot core")
-            cmd = self._conf.reboot
-            self._system_cmd(cmd)
-
-            # clear fautl flags
+            self._system_cmd(self._conf.reboot)
             self.clear_fault_flags()
-
             return True
         return False

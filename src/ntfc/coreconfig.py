@@ -117,6 +117,11 @@ class CoreConfig:
         """Return core reboot command."""
         return self._config.get("reboot", "")
 
+    @property
+    def poweroff(self) -> Any:
+        """Return core poweroff command."""
+        return self._config.get("poweroff", "")
+
     def kv_check(self, cfg: str) -> Any:
         """Check Kconfig option and return its value.
 

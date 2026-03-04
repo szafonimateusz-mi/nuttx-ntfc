@@ -181,6 +181,7 @@ For real hardware with UART communication:
        defconfig: 'boards/arm/stm32h7/nucleo-h743zi/configs/ntfc'
        flash: 'st-flash write $IMAGE_BIN 0x08000000'
        reboot: 'st-flash reset'
+       poweroff: ''
 
 **Serial Settings Format:** ``BAUDRATE,PARITY,DATABITS,STOPBITS``
 
@@ -301,12 +302,13 @@ Use when:
 - Pre-built test images available
 - CI environments with cached binaries
 
-**Flash and Reboot (real hardware):**
+**Hardware Control (real hardware):**
 
-Automate firmware deployment and device reset is handled with two parameters:
+Automate firmware deployment and device control:
 
 - ``flash``: System command executed before tests
-- ``reboot``: System command to reset device between test runs
+- ``reboot``: System command for hardware reboot of the device
+- ``poweroff``: System command for hardware poweroff of the device
 
 Flash command can use special tags that are handled by NTFC:
 
@@ -319,6 +321,24 @@ Example usage with ``st-flash`` tool:
 
    flash: 'st-flash write $IMAGE_BIN 0x08000000'
    reboot: 'st-flash reset'
+   poweroff: 'st-flash reset'
+
+**Hard vs Soft reboot/poweroff:**
+
+The ``reboot()`` and ``poweroff()`` device methods support two modes,
+selectable via the ``hard`` parameter (default ``True``):
+
+- **Hard mode** (``hard=True``): Uses hardware-level control.
+
+  - *Serial devices*: runs the ``reboot`` / ``poweroff`` system command from
+    config (e.g. ``st-flash reset``). Returns ``False`` when no command is
+    configured.
+  - *Host devices (sim/qemu)*: restarts the emulator process entirely via
+    ``_dev_reopen()``.
+
+- **Soft mode** (``hard=False``): Sends the OS shell command (``reboot`` or
+  ``poweroff``) to the device via the serial/shell interface. Always returns
+  ``True`` after sending the command.
 
 Product Configuration Fields
 ============================
@@ -366,7 +386,9 @@ These fields are parsed by :class:`ntfc.coreconfig.CoreConfig`.
    * - ``flash``
      - System command to flash firmware (work in progress)
    * - ``reboot``
-     - System command to reboot device
+     - System command for hardware reboot of the device (serial only)
+   * - ``poweroff``
+     - System command for hardware poweroff of the device (serial only)
    * - ``dcmake``
      - Defines passed to CMake build (YAML mapping syntax, e.g.
        ``FEATURE_X: ON``)

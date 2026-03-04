@@ -446,8 +446,6 @@ class ProductCore:
 
         :return: True if the force panic was successful, False otherwise.
         """
-        del timeout
-
         panic_char = self.device.panic_char
         if not panic_char:
             logger.error("Force panic not supported.")
