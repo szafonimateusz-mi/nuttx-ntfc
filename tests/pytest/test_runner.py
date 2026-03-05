@@ -22,6 +22,65 @@ from ntfc.pytest.runner import RunnerPlugin
 
 
 def test_test_pytestrunnerplugin_init():
-
     _ = RunnerPlugin(False)
     _ = RunnerPlugin(True)
+
+
+def test_pytest_sessionfinish_no_result_dir():
+    """Test pytest_sessionfinish when result_dir not available."""
+    import pytest as pytest_module
+
+    plugin = RunnerPlugin(False)
+
+    # Save original values
+    old_products = getattr(pytest_module, "products", None)
+    old_result_dir = getattr(pytest_module, "result_dir", None)
+
+    # Mock pytest without result_dir
+    pytest_module.products = []
+    pytest_module.result_dir = None
+
+    try:
+        # Should not raise exception when result_dir is None
+        # (tests line 119 check)
+        plugin.pytest_sessionfinish()
+    finally:
+        # Restore original values
+        if old_products is not None:
+            pytest_module.products = old_products
+        else:
+            del pytest_module.products  # pragma: no cover
+        if old_result_dir is not None:
+            pytest_module.result_dir = old_result_dir
+        else:
+            del pytest_module.result_dir  # pragma: no cover
+
+
+def test_pytest_sessionfinish_empty_products():
+    """Test pytest_sessionfinish with empty products list."""
+    import pytest as pytest_module
+
+    plugin = RunnerPlugin(False)
+
+    # Save original values
+    old_products = getattr(pytest_module, "products", None)
+    old_result_dir = getattr(pytest_module, "result_dir", None)
+
+    # Mock pytest with empty products list
+    pytest_module.products = []
+    pytest_module.result_dir = "/tmp/test"
+
+    try:
+        # Should not raise exception with empty products
+        # (covers line 106->120: for loop with empty list)
+        plugin.pytest_sessionfinish()
+    finally:
+        # Restore original values
+        if old_products is not None:
+            pytest_module.products = old_products
+        else:
+            del pytest_module.products  # pragma: no cover
+        if old_result_dir is not None:
+            pytest_module.result_dir = old_result_dir
+        else:
+            del pytest_module.result_dir  # pragma: no cover

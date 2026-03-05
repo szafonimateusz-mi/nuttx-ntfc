@@ -20,12 +20,16 @@
 
 """Device state machine for debug monitoring."""
 
+import functools
 import threading
 import time
 from enum import Enum, auto
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
+from ntfc.device.heartbeat import HeartbeatMonitor
 from ntfc.log.logger import logger
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 _StateChangeCallback = Callable[["DeviceState", "DeviceState", str], None]
 
@@ -82,6 +86,10 @@ class DeviceStateManager:
     with a single, coherent state representation that supports optional
     change notifications and typed crash detection.
 
+    Includes active heartbeat monitoring (via :class:`HeartbeatMonitor`) to
+    detect busyloop scenarios where the device keeps flooding logs but cannot
+    respond to commands.
+
     :param busyloop_threshold: Seconds of silence before the device is
         declared to be in a busy loop.  Defaults to ``180.0``.
     :param on_state_change: Optional callback invoked on every state change.
@@ -112,6 +120,21 @@ class DeviceStateManager:
         self._current_state = DeviceState.NORMAL
         self._last_activity_time: Optional[float] = None
         self._crash_type: CrashType = CrashType.UNKNOWN
+
+        # Heartbeat monitoring (delegated to HeartbeatMonitor)
+        self._heartbeat = HeartbeatMonitor(on_state_change)
+        self._heartbeat.set_state_callbacks(
+            set_busy_loop=self.set_busy_loop,
+            is_healthy=self.is_healthy,
+        )
+
+    def set_device(self, device: object) -> None:
+        """Set device reference for heartbeat monitoring.
+
+        :param device: Device object that implements
+            send_cmd_read_until_pattern
+        """
+        self._heartbeat.set_device(device)
 
     def get_current_state(self) -> DeviceState:
         """Return the current device state (thread-safe).
@@ -211,14 +234,34 @@ class DeviceStateManager:
             self._current_state = DeviceState.NORMAL
             self._last_activity_time = None
             self._crash_type = CrashType.UNKNOWN
+        self._heartbeat.reset_failures()
 
     def update_activity(self) -> None:
         """Record that the device produced output.
 
         Call this whenever a non-empty data chunk is received from the
         device.  The timestamp is used by :meth:`check_busy_loop_timeout`.
+        Also resets heartbeat failure count.
         """
-        self._last_activity_time = time.time()
+        with self._lock:
+            self._last_activity_time = time.time()
+        self._heartbeat.update_activity()
+
+    def mark_command_start(self) -> None:
+        """Mark that a command is being executed.
+
+        This prevents heartbeat checks from interfering with command execution.
+        """
+        self._heartbeat.mark_command_start()
+
+    def mark_command_end(self) -> None:
+        """Mark that command execution has finished.
+
+        This allows heartbeat checks to resume and resets activity time.
+        """
+        self._heartbeat.mark_command_end()
+        with self._lock:
+            self._last_activity_time = time.time()
 
     def check_busy_loop_timeout(self) -> bool:
         """Return ``True`` and enter busy-loop state if the device went silent.
@@ -314,3 +357,36 @@ class DeviceStateManager:
                 self._on_state_change(old_state, new_state, reason)
             except Exception as exc:
                 logger.warning("state change callback raised: %s", exc)
+
+    @staticmethod
+    def mark_command(method: _F) -> _F:
+        """Mark a method as a device command, skipping heartbeat checks.
+
+        Calls :meth:`mark_command_start` before and :meth:`mark_command_end`
+        after the method.
+        """
+
+        @functools.wraps(method)
+        def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            self._state_mgr.mark_command_start()
+            try:
+                return method(self, *args, **kwargs)
+            finally:
+                self._state_mgr.mark_command_end()
+
+        return wrapper  # type: ignore[return-value]
+
+    def enable_heartbeat(
+        self, interval: float = 60, threshold: int = 3
+    ) -> None:
+        """Enable heartbeat detection.
+
+        :param interval: Heartbeat check interval (seconds, minimum 30)
+        :param threshold: Failure threshold (consecutive failures for busyloop)
+        :raises ValueError: If interval is less than minimum (30 seconds)
+        """
+        self._heartbeat.enable_heartbeat(interval, threshold)
+
+    def disable_heartbeat(self) -> None:
+        """Disable heartbeat detection."""
+        self._heartbeat.disable_heartbeat()

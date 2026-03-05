@@ -10,6 +10,10 @@ config:                           # common, global configuration options
   timeout: 120                    # timeout per test case. Defaults to 120
   timeout_session: 2400           # timeout per session. Defaults to 2400
   loops: 1                        # specify the number of times to run each testcase. Defaults to 1
+  heartbeat:                      # (optional) heartbeat monitoring configuration
+    enabled: False                # enable heartbeat monitoring. Defaults to False
+    interval: 60                  # heartbeat check interval in seconds (min: 30). Defaults to 60
+    threshold: 3                  # consecutive failures before declaring busyloop. Defaults to 3
 
 product:                          # many products can be supported in tests (product == product0)
 

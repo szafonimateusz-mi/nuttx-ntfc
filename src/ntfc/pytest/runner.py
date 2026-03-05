@@ -26,6 +26,7 @@ from typing import Any, Dict
 import pytest
 
 from ntfc.log.handler import LogHandler
+from ntfc.log.logger import logger
 from ntfc.log.report import Reporter
 
 ###############################################################################
@@ -101,6 +102,18 @@ class RunnerPlugin:
         This hook is called after all tests have completed.
         It generates result_summary.txt and result_summary.html files.
         """
+        # Disable heartbeat monitoring for all devices before shutdown
+        for product in pytest.products:
+            for core_idx in range(len(product.cores)):
+                core = product.core(core_idx)
+                # Access device through ProductCore
+                device = core._device
+                logger.info(
+                    f"Disabling heartbeat monitoring for "
+                    f"{product.name} core {core_idx}"
+                )
+                device._state_mgr.disable_heartbeat()
+
         if pytest.result_dir:
             reporter = Reporter()
             reporter.generate_result_summary(pytest.result_dir)

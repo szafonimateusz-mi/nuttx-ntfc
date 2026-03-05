@@ -201,6 +201,21 @@ results is removed:
 * ``max_size_mb`` — removes the oldest sessions until the total size of the
   results directory falls within the configured limit.
 
+Heartbeat Monitoring
+====================
+
+Periodically sends ``echo '[heartbeat ...]'`` to detect devices stuck in a
+busy-loop (flooding output but not responding to commands).  On ``threshold``
+consecutive failures the device is marked ``BUSY_LOOP``.
+
+.. code-block:: yaml
+
+   config:
+     heartbeat:
+       enabled: True
+       interval: 60    # seconds between probes, minimum 30
+       threshold: 3    # consecutive failures to declare busyloop
+
 Signal Handlers
 ===============
 

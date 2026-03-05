@@ -21,6 +21,7 @@
 """Dummy device for testing."""
 
 from ntfc.device.common import CmdReturn, CmdStatus
+from ntfc.device.state import DeviceState, DeviceStateManager
 
 ###############################################################################
 # Class: DeviceDummy
@@ -32,10 +33,17 @@ class DeviceDummy:  # pragma: no cover
 
     def __init__(self, _):
         """Initialize dummy device."""
+        # Create state manager
+        self._state_mgr = DeviceStateManager()
+        self._state_mgr.set_device(self)
+
+        # Device state flags
+        self._open = False
+        self._interactive_mode = False
 
     def start(self) -> None:
         """Start dummy device."""
-        pass
+        self._open = True
 
     def send_cmd_read_until_pattern(
         self, cmd: bytes, pattern: bytes, timeout: int
@@ -84,10 +92,12 @@ class DeviceDummy:  # pragma: no cover
 
     def poweroff(self):
         """Poweroff the device."""
+        self._open = False
         return -1
 
     def reboot(self, timeout: int):
         """Reboot the device."""
+        self._open = True
         return -1
 
     def start_log_collect(self, logs) -> None:
@@ -95,3 +105,25 @@ class DeviceDummy:  # pragma: no cover
 
     def stop_log_collect(self) -> None:
         """Stop device log collector."""
+
+    ###
+    # Device State Monitoring Methods (for testing)
+    ###
+
+    def check_device_state(self) -> DeviceState:
+        """Check current device state."""
+        return self._state_mgr.get_current_state()
+
+    def enable_heartbeat_monitoring(
+        self, interval: float = 60, threshold: int = 3
+    ) -> None:
+        """Enable heartbeat monitoring."""
+        self._state_mgr.enable_heartbeat(interval, threshold)
+
+    def disable_heartbeat_monitoring(self) -> None:
+        """Disable heartbeat monitoring."""
+        self._state_mgr.disable_heartbeat()
+
+    def set_interactive_mode(self, enabled: bool) -> None:
+        """Set interactive mode state."""
+        self._interactive_mode = enabled

@@ -80,6 +80,24 @@ class EnvConfig:
         """Return test configuration."""
         return self._cfg_values
 
+    @property
+    def heartbeat(self) -> Dict[str, Any]:
+        """Return heartbeat monitoring configuration.
+
+        :return: Dictionary with keys: 'enabled' (bool), 'interval' (int),
+            'threshold' (int). Defaults to disabled if not configured.
+        """
+        default_config = {
+            "enabled": False,
+            "interval": 60,
+            "threshold": 3,
+        }
+        config = self._cfg_values.get("config", {})
+        heartbeat_cfg = config.get("heartbeat", {})
+
+        # Merge with defaults
+        return {**default_config, **heartbeat_cfg}
+
     # dep_config
     def kv_check(self, cfg: str, product: int = 0, core: int | str = 0) -> Any:
         """Check Kconfig option.

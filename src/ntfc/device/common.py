@@ -97,11 +97,14 @@ class DeviceCommon(ABC):
         self._logs: Optional[LogHandler] = None
         self._pending_device_events: list[str] = []
 
-        # device health
+        # device health - use state manager with heartbeat support
+
         self._state_mgr = DeviceStateManager(
             busyloop_threshold=float(self._BUSY_LOOP_TIMEOUT),
             crash_signatures=self._dev.crash_signatures,
         )
+        # Set device reference for heartbeat monitoring
+        self._state_mgr.set_device(self)
         self.clear_fault_flags()
 
         self._read_all_sleep = 0.1
@@ -223,6 +226,7 @@ class DeviceCommon(ABC):
             return False
         return not self._state_mgr.is_unhealthy()
 
+    @DeviceStateManager.mark_command
     def send_command(self, cmd: bytes | str, timeout: int = 1) -> bytes:
         """Send command to the device and get the response."""
         # convert string to bytes
@@ -249,6 +253,7 @@ class DeviceCommon(ABC):
         self._console_log(rsp)
         return rsp
 
+    @DeviceStateManager.mark_command
     def send_cmd_read_until_pattern(  # noqa: C901
         self, cmd: bytes, pattern: bytes, timeout: int
     ) -> CmdReturn:
@@ -270,14 +275,28 @@ class DeviceCommon(ABC):
         if not isinstance(pattern, bytes):
             raise TypeError("Pattern must by bytes")
 
-        # clear buffer for any spurious data
-        _ = self._read_all(timeout=0)
+        self._log_console_input(cmd)
 
+        # Clear buffer for any spurious data
+        _ = self._read_all(timeout=0)
+        self._console_log(_)
+
+        # Log written command if echo is not supported by DTU
+        if not self._has_echo:  # pragma: no cover
+            self._console_log(cmd)
+
+        # Write command
+        self._write(cmd)
+        logger.info("Sent command: %s", cmd)
+
+        # Read initial response
         end_time = time.time() + timeout
-        output = self.send_command(cmd, 0)
+        output = self._read_all(timeout=0)
         output_all = output
+        self._console_log(output)
         _match = None
         ret = CmdStatus.TIMEOUT
+
         while True:
             chunk = self._read_all(0.1)
             output += chunk

@@ -248,6 +248,31 @@ class MyPytest:
             # finish product initialization
             product.init()
 
+        # Enable heartbeat monitoring for all devices after startup
+        # Read heartbeat configuration
+        heartbeat_cfg = self._config.heartbeat
+        if heartbeat_cfg["enabled"]:  # pragma: no cover
+            logger.info(
+                f"Heartbeat monitoring enabled: "
+                f"interval={heartbeat_cfg['interval']}s, "
+                f"threshold={heartbeat_cfg['threshold']}"
+            )
+            for product in pytest.products:
+                for core_idx in range(len(product.cores)):
+                    core = product.core(core_idx)
+                    # Access device through ProductCore
+                    device = core._device
+                    logger.info(
+                        f"Enabling heartbeat monitoring for "
+                        f"{product.name} core {core_idx}"
+                    )
+                    device._state_mgr.enable_heartbeat(
+                        interval=float(heartbeat_cfg["interval"]),
+                        threshold=int(heartbeat_cfg["threshold"]),
+                    )
+        else:
+            logger.info("Heartbeat monitoring disabled (via config)")
+
     def runner(
         self,
         testpath: str,
@@ -319,7 +344,8 @@ class MyPytest:
         :param reinit: re-initialize pytest environment (default: True)
         """
         # initialize pytest env
-        self._init_pytest(testpath)
+        if reinit:  # pragma: no cover
+            self._init_pytest(testpath)
 
         # collector plugin
         collector = CollectorPlugin(self._config, True)
