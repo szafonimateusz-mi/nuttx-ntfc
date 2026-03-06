@@ -188,6 +188,42 @@ class CoresHandler:
 
             return CmdReturn(CmdStatus.SUCCESS)
 
+    def readUntilPattern(  # noqa: N802
+        self,
+        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        timeout: int = 30,
+        fail_pattern: Optional[
+            Union[str, bytes, List[Union[str, bytes]]]
+        ] = None,
+    ) -> "CmdReturn":
+        """Read device output until pattern without sending a command.
+
+        In AMP mode: Execute in parallel on all cores.
+        In SMP mode: Execute only on the current active core.
+        Use switch_to_core() fixture to switch cores for multi-core.
+        """
+        if self._conf.is_smp:
+            return self._cores[0].readUntilPattern(
+                pattern, timeout, fail_pattern
+            )
+        else:
+            results = run_parallel(
+                self._cores,
+                "readUntilPattern",
+                pattern,
+                timeout,
+                fail_pattern,
+            )
+
+            for idx, ret in enumerate(results):
+                if ret.status != CmdStatus.SUCCESS:
+                    logger.info(
+                        f"readUntilPattern failed for core {self._cores[idx]}"
+                    )
+                    return cast("CmdReturn", ret)
+
+            return CmdReturn(CmdStatus.SUCCESS)
+
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Send ctrl command to all cores in parallel."""
         run_parallel(self._cores, "sendCtrlCmd", ctrl_char)

@@ -172,6 +172,46 @@ def test_core_send_command_read_until_pattern(envconfig_dummy):
         )
 
 
+def test_core_read_until_pattern(envconfig_dummy):
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        # success: device returns SUCCESS
+        dev.read_until_pattern.return_value = CmdReturn(CmdStatus.SUCCESS)
+        assert p.readUntilPattern("PASS") == CmdReturn(CmdStatus.SUCCESS)
+
+        # fail_pattern triggered: device returns FAILED
+        dev.read_until_pattern.return_value = CmdReturn(CmdStatus.FAILED)
+        assert p.readUntilPattern("PASS", fail_pattern="FAIL") == CmdReturn(
+            CmdStatus.FAILED
+        )
+
+        # encoded pattern and fail_pattern passed correctly
+        p.readUntilPattern("PASS", timeout=10, fail_pattern="FAIL")
+        dev.read_until_pattern.assert_called_with(
+            pattern=b"PASS", timeout=10, fail_pattern=b"(?:FAIL)"
+        )
+
+        # bytes pattern
+        p.readUntilPattern(b"PASS", timeout=5)
+        dev.read_until_pattern.assert_called_with(
+            pattern=b"PASS", timeout=5, fail_pattern=None
+        )
+
+        # list of patterns concatenated (encode_for_device behavior)
+        p.readUntilPattern(["OK", b"DONE"], timeout=15)
+        dev.read_until_pattern.assert_called_with(
+            pattern=b"OKDONE", timeout=15, fail_pattern=None
+        )
+
+        # list fail_pattern OR-joined
+        p.readUntilPattern("PASS", fail_pattern=["FAIL", b"ERROR"])
+        dev.read_until_pattern.assert_called_with(
+            pattern=ANY, timeout=30, fail_pattern=b"(?:FAIL)|(?:ERROR)"
+        )
+
+
 def test_core_send_command_fail_pattern(envconfig_dummy):
 
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:

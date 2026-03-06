@@ -254,8 +254,77 @@ class DeviceCommon(ABC):
         self._console_log(rsp)
         return rsp
 
+    def _read_until_pattern_loop(  # noqa: C901
+        self,
+        initial_output: bytes,
+        pattern: bytes,
+        timeout: int,
+        fail_pattern: Optional[bytes] = None,
+    ) -> CmdReturn:
+        """Read device output until pattern or fail_pattern matches.
+
+        :param initial_output: Output already accumulated before the loop
+         (e.g. command echo)
+        :param pattern: Regex pattern whose match signals success
+        :param timeout: Timeout in seconds
+        :param fail_pattern: Regex pattern whose match signals failure and
+         causes an immediate exit
+
+        :return: CmdReturn : command return data
+        """
+        end_time = time.time() + timeout
+        output = initial_output
+        _match = None
+        ret = CmdStatus.TIMEOUT
+
+        while True:
+            chunk = self._read_all(0.1)
+            output += chunk
+            self._console_log(chunk)
+
+            # limit output data to process, otherwise re.search can stack
+            # REVISIT: its possible to miss some pattern in output
+            output_max = 100000
+            if len(output) > output_max:  # pragma: no cover
+                output = output[-output_max:]
+
+            if fail_pattern and re.search(fail_pattern, output):
+                logger.debug(
+                    f">>fail match: {output!r}, search: {fail_pattern!r}<<"
+                )
+                ret = CmdStatus.FAILED
+                break
+
+            _match = re.search(pattern, output)
+            if _match:
+                logger.debug(f">>match: {output!r}, search: {pattern!r}<<")
+                ret = CmdStatus.SUCCESS
+                break
+
+            # check for timeout
+            if time.time() > end_time:
+                ret = CmdStatus.TIMEOUT
+                break
+
+            # exit before timeout if dev crashed
+            if not self.dev_is_health():  # pragma: no cover
+                break
+
+        # check for output flood condition.
+        # If we still get some data from dev, its possible that we stuck
+        # in some command
+        if ret == CmdStatus.TIMEOUT:
+            chunk = self._read_all(0.1)
+            if len(chunk) > 0:
+                if not self._state_mgr.is_unhealthy():
+                    self._log_device_event("fault detected: flood")
+                self._state_mgr.set_unhealthy("Flood detected")
+            self._console_log(chunk)
+
+        return CmdReturn(ret, _match, output.decode("utf-8"))
+
     @DeviceStateManager.mark_command
-    def send_cmd_read_until_pattern(  # noqa: C901
+    def send_cmd_read_until_pattern(
         self,
         cmd: bytes,
         pattern: bytes,
@@ -297,60 +366,37 @@ class DeviceCommon(ABC):
         logger.info("Sent command: %s", cmd)
 
         # Read initial response
-        end_time = time.time() + timeout
-        output = self._read_all(timeout=0)
-        output_all = output
-        self._console_log(output)
-        _match = None
-        ret = CmdStatus.TIMEOUT
+        initial_output = self._read_all(timeout=0)
+        self._console_log(initial_output)
 
-        while True:
-            chunk = self._read_all(0.1)
-            output += chunk
-            output_all += chunk
-            self._console_log(chunk)
+        return self._read_until_pattern_loop(
+            initial_output, pattern, timeout, fail_pattern
+        )
 
-            # limit output data to process, otherwise re.search can stack
-            # REVISIT: its possible to miss some pattern in output
-            output_max = 100000
-            if len(output) > output_max:  # pragma: no cover
-                output = output[-output_max:]
+    @DeviceStateManager.mark_command
+    def read_until_pattern(
+        self,
+        pattern: bytes,
+        timeout: int,
+        fail_pattern: Optional[bytes] = None,
+    ) -> CmdReturn:
+        """Read device output until a pattern without sending a command.
 
-            if fail_pattern and re.search(fail_pattern, output):
-                logger.debug(
-                    f">>fail match: {output!r}, search: {fail_pattern!r}<<"
-                )
-                ret = CmdStatus.FAILED
-                break
+        Useful for catching output from an already-running program.
 
-            _match = re.search(pattern, output)
-            if _match:
-                logger.debug(f">>match: {output!r}, search: {pattern!r}<<")
-                ret = CmdStatus.SUCCESS
-                break
+        :param pattern: Regex pattern whose match signals success
+        :param timeout: Timeout in seconds
+        :param fail_pattern: (bytes, optional) Regex pattern whose presence in
+         the output immediately terminates the read and returns FAILED.
 
-            # check for timeout
-            if time.time() > end_time:
-                ret = CmdStatus.TIMEOUT
-                break
+        :return: CmdReturn : command return data
+        """
+        if not isinstance(pattern, bytes):
+            raise TypeError("Pattern must by bytes")
 
-            # exit before timeout if dev crashed
-            if not self.dev_is_health():  # pragma: no cover
-                break
-
-        # check for output flood condition.
-        # If we still get some data from dev, its possible that we stuck
-        # in some command
-        if ret == CmdStatus.TIMEOUT:
-            chunk = self._read_all(0.1)
-            if len(chunk) > 0:
-                if not self._state_mgr.is_unhealthy():
-                    self._log_device_event("fault detected: flood")
-                self._state_mgr.set_unhealthy("Flood detected")
-            output_all += chunk
-            self._console_log(chunk)
-
-        return CmdReturn(ret, _match, output.decode("utf-8"))
+        return self._read_until_pattern_loop(
+            b"", pattern, timeout, fail_pattern
+        )
 
     def send_ctrl_cmd(self, ctrl_char: str) -> CmdStatus:
         """Send control command to the device."""

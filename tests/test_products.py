@@ -51,6 +51,12 @@ def test_products_init_inval():
             CmdStatus.TIMEOUT
         )
 
+        dev.readUntilPattern.return_value = CmdReturn(CmdStatus.SUCCESS)
+        assert h.readUntilPattern("pattern") == CmdReturn(CmdStatus.SUCCESS)
+
+        dev.readUntilPattern.return_value = CmdReturn(CmdStatus.FAILED)
+        assert h.readUntilPattern("pattern") == CmdReturn(CmdStatus.FAILED)
+
         assert h.sendCtrlCmd("Z") is None
 
         dev.name = "test"

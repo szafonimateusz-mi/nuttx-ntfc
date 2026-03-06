@@ -23,6 +23,8 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from ntfc.device.common import CmdReturn, CmdStatus, DeviceCommon
 from ntfc.log.handler import LogHandler
 
@@ -172,6 +174,35 @@ def test_device_common_send_cmd_fail_pattern():
         g_mock_read = b"SUCCESS"
         ret = dev.send_cmd_read_until_pattern(b"", b"SUCCESS", 10)
         assert ret.status == CmdStatus.SUCCESS
+
+
+def test_device_common_read_until_pattern():
+
+    with patch("ntfc.envconfig.EnvConfig") as mockdevice:
+
+        global g_mock_read
+
+        config = mockdevice.return_value
+        dev = DeviceMock(config)
+
+        # success: pattern found in output
+        g_mock_read = b"PASS: all tests ok"
+        ret = dev.read_until_pattern(b"PASS", 10)
+        assert ret.status == CmdStatus.SUCCESS
+
+        # fail_pattern detected → FAILED
+        g_mock_read = b"FAIL: assertion error"
+        ret = dev.read_until_pattern(b"PASS", 10, fail_pattern=b"FAIL")
+        assert ret.status == CmdStatus.FAILED
+
+        # timeout when neither pattern matches
+        g_mock_read = b"still running..."
+        ret = dev.read_until_pattern(b"PASS", 1)
+        assert ret.status == CmdStatus.TIMEOUT
+
+        # TypeError for non-bytes pattern
+        with pytest.raises(TypeError):
+            dev.read_until_pattern("PASS", 10)
 
 
 def test_device_common_panic_char():

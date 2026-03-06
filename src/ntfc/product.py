@@ -115,6 +115,17 @@ class Product:
             cmd, pattern, args, timeout
         )
 
+    def readUntilPattern(  # noqa: N802
+        self,
+        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        timeout: int = 30,
+        fail_pattern: Optional[
+            Union[str, bytes, List[Union[str, bytes]]]
+        ] = None,
+    ) -> "CmdReturn":
+        """Call for all cores."""
+        return self._cores.readUntilPattern(pattern, timeout, fail_pattern)
+
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Call for all cores."""
         return self._cores.sendCtrlCmd(ctrl_char)

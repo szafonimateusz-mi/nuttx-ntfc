@@ -104,6 +104,33 @@ class ProductsHandler:
 
         return CmdReturn(CmdStatus.SUCCESS)
 
+    def readUntilPattern(  # noqa: N802
+        self,
+        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        timeout: int = 30,
+        fail_pattern: Optional[
+            Union[str, bytes, List[Union[str, bytes]]]
+        ] = None,
+    ) -> CmdReturn:
+        """Read device output until pattern on all products in parallel."""
+        results = run_parallel(
+            self._products,
+            "readUntilPattern",
+            pattern,
+            timeout,
+            fail_pattern,
+        )
+
+        for idx, ret in enumerate(results):
+            if ret.status != CmdStatus.SUCCESS:
+                logger.info(
+                    f"readUntilPattern failed for "
+                    f"product {self._products[idx]}"
+                )
+                return cast("CmdReturn", ret)
+
+        return CmdReturn(CmdStatus.SUCCESS)
+
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Send ctrl command to all products in parallel."""
         run_parallel(self._products, "sendCtrlCmd", ctrl_char)

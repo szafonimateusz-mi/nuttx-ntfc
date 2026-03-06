@@ -519,6 +519,12 @@ instances:
      - Send command and read until a specific pattern is found. Returns
        ``CmdStatus.FAILED`` if ``fail_pattern`` is found in the output.
      - ``pytest.product.sendCommandReadUntilPattern("hi", "Hi", timeout=15)``
+   * - ``readUntilPattern(pattern, timeout, fail_pattern)``
+     - Read device output without sending a command. Returns ``CmdStatus.SUCCESS``
+       when ``pattern`` is found or ``CmdStatus.FAILED`` when ``fail_pattern``
+       is found. Useful for programs already running on the device.
+     - ``pytest.product.readUntilPattern("PASS", fail_pattern="FAIL",
+       timeout=60)``
    * - ``sendCtrlCmd(ctrl_char)``
      - Send a control character (e.g., ``"c"`` for Ctrl+C).
      - ``pytest.product.sendCtrlCmd("c")``
@@ -572,4 +578,45 @@ For ``sendCommand`` the ``regexp`` flag also applies to ``fail_pattern``.
            fail_pattern=["Assertion failed", "kernel panic"],
            timeout=60,
        )
+       assert ret.status == CmdStatus.SUCCESS
+
+Reading Without Sending a Command
+-----------------------------------
+
+``readUntilPattern`` reads device output without sending a command first.
+It is intended for programs that are already running on the device (e.g.
+launched by a previous ``sendCommand``) and whose pass/fail result must be
+captured from their standard output.
+
+The method blocks until one of three things happens:
+
+- ``pattern`` is matched → returns ``CmdReturn`` with ``CmdStatus.SUCCESS``
+- ``fail_pattern`` is matched → returns ``CmdReturn`` with ``CmdStatus.FAILED``
+  (exits immediately, does not wait for ``pattern``)
+- Timeout expires → returns ``CmdReturn`` with ``CmdStatus.TIMEOUT``
+
+``pattern`` is required. ``fail_pattern`` accepts a single string/bytes or a
+list, treated as regex.
+
+.. code-block:: python
+
+   import pytest
+   from ntfc.device.common import CmdStatus
+
+   def test_background_test_runner():
+       # Start a long-running test suite (fire and forget)
+       pytest.product.sendCommand("run_suite &", timeout=2)
+
+       # Wait for the suite to finish, catching pass/fail output
+       ret = pytest.product.readUntilPattern(
+           "All tests passed",
+           fail_pattern=["FAILED", "Assertion failed", "kernel panic"],
+           timeout=120,
+       )
+       assert ret.status == CmdStatus.SUCCESS
+
+   def test_boot_sequence():
+       pytest.product.reboot()
+       # Wait for the shell prompt after reboot
+       ret = pytest.product.readUntilPattern("nsh>", timeout=30)
        assert ret.status == CmdStatus.SUCCESS

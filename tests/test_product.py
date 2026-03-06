@@ -48,6 +48,7 @@ def test_product_properties(envconfig_dummy):
 
     assert p.sendCommand("test")
     assert p.sendCommandReadUntilPattern("test")
+    assert p.readUntilPattern("pattern")
     assert p.sendCtrlCmd("C") is None
     assert p.reboot()
     p._cores.force_panic = MagicMock(return_value=True)

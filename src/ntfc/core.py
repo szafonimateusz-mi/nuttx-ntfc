@@ -252,6 +252,23 @@ class ProductCore:
 
         return cmdret.status
 
+    def _encode_fail_pattern(
+        self,
+        fail_pattern: Union[str, bytes, List[Union[str, bytes]]],
+    ) -> bytes:
+        """Encode fail_pattern (str/bytes/list) into a single bytes OR-regex.
+
+        :param fail_pattern: One or more regex patterns indicating failure
+        :return: Bytes regex
+        """
+        fp_list: List[Union[str, bytes]] = (
+            fail_pattern if isinstance(fail_pattern, list) else [fail_pattern]
+        )
+        decoded = [
+            p.decode("utf-8") if isinstance(p, bytes) else p for p in fp_list
+        ]
+        return "|".join(f"(?:{p})" for p in decoded).encode("utf-8")
+
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
         cmd: str,
@@ -280,21 +297,9 @@ class ProductCore:
         cmd = self._prepare_command(cmd, args)
         pattern = self._default_prompt_pattern(cmd) if not pattern else pattern
         cmd_bytes, pattern_bytes = self._encode_for_device(cmd, pattern)
-
-        fail_pattern_bytes: Optional[bytes] = None
-        if fail_pattern:
-            fp_list = (
-                fail_pattern
-                if isinstance(fail_pattern, list)
-                else [fail_pattern]
-            )
-            decoded = [
-                p.decode("utf-8") if isinstance(p, bytes) else p
-                for p in fp_list
-            ]
-            fail_pattern_bytes = "|".join(f"(?:{p})" for p in decoded).encode(
-                "utf-8"
-            )
+        fail_pattern_bytes = (
+            self._encode_fail_pattern(fail_pattern) if fail_pattern else None
+        )
 
         logger.debug(
             f"Sending command: {cmd}, expecting pattern: "
@@ -303,6 +308,44 @@ class ProductCore:
         )
         return self._device.send_cmd_read_until_pattern(
             cmd_bytes,
+            pattern=pattern_bytes,
+            timeout=timeout,
+            fail_pattern=fail_pattern_bytes,
+        )
+
+    def readUntilPattern(  # noqa: N802
+        self,
+        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        timeout: int = 30,
+        fail_pattern: Optional[
+            Union[str, bytes, List[Union[str, bytes]]]
+        ] = None,
+    ) -> CmdReturn:
+        """Read device output until a pattern without sending a command.
+
+        Useful for catching output from an already-running program and
+        checking whether it passes or fails based on the patterns found.
+
+        :param pattern: (str, bytes, or list of (str, bytes)) Regex pattern to
+         wait for. Signals a successful outcome.
+        :param timeout: (int) timeout value in seconds, default 30s.
+        :param fail_pattern: (str, bytes, or list of (str, bytes)) Regex
+         pattern or list of patterns whose presence in the output immediately
+         terminates the read and returns FAILED.
+
+        :return: CmdReturn : command return data
+        """
+        _, pattern_bytes = self._encode_for_device("", pattern)
+        fail_pattern_bytes = (
+            self._encode_fail_pattern(fail_pattern) if fail_pattern else None
+        )
+
+        logger.debug(
+            f"Reading until pattern: "
+            f"{pattern.decode() if isinstance(pattern, bytes) else pattern} "
+            f"(timeout={timeout}s)"
+        )
+        return self._device.read_until_pattern(
             pattern=pattern_bytes,
             timeout=timeout,
             fail_pattern=fail_pattern_bytes,

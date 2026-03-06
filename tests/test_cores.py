@@ -56,6 +56,12 @@ def test_cores_init(envconfig_dummy):
             CmdStatus.TIMEOUT
         )
 
+        c.core(0).readUntilPattern.return_value = CmdReturn(CmdStatus.SUCCESS)
+        assert c.readUntilPattern("pattern") == CmdReturn(CmdStatus.SUCCESS)
+
+        c.core(0).readUntilPattern.return_value = CmdReturn(CmdStatus.FAILED)
+        assert c.readUntilPattern("pattern") == CmdReturn(CmdStatus.FAILED)
+
         assert c.sendCtrlCmd("Z") is None
 
         c.core(0).busyloop = False
@@ -119,3 +125,9 @@ def test_cores_smp_mode(envconfig_smp_dummy):
         result = c.sendCommandReadUntilPattern("test")
         assert result.status == CmdStatus.SUCCESS
         c0.sendCommandReadUntilPattern.assert_called_once()
+
+        # Test readUntilPattern in SMP mode
+        c0.readUntilPattern.return_value = CmdReturn(CmdStatus.SUCCESS)
+        result = c.readUntilPattern("pattern")
+        assert result.status == CmdStatus.SUCCESS
+        c0.readUntilPattern.assert_called_once()
