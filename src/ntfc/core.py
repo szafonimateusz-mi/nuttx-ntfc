@@ -176,6 +176,24 @@ class ProductCore:
             matched = matched.decode("utf-8", errors="ignore")
         return self._device.no_cmd in matched
 
+    def _build_fail_pattern_bytes(
+        self,
+        fail_pattern: Union[str, List[str]],
+        regexp: bool,
+    ) -> bytes:
+        """Encode fail_pattern strings into a single bytes regex (OR joined).
+
+        :param fail_pattern: One or more patterns indicating failure
+        :param regexp: If False, treat each pattern as a literal string
+        :return: Compiled bytes regex
+        """
+        items = (
+            fail_pattern if isinstance(fail_pattern, list) else [fail_pattern]
+        )
+        if not regexp:
+            items = [re.escape(p) for p in items]
+        return "|".join(f"(?:{p})" for p in items).encode("utf-8")
+
     def sendCommand(  # noqa: N802
         self,
         cmd: str,
@@ -185,6 +203,7 @@ class ProductCore:
         flag: str = "",
         match_all: bool = True,
         regexp: bool = False,
+        fail_pattern: Optional[Union[str, List[str]]] = None,
     ) -> "CmdStatus":
         """Send command and wait for expected response.
 
@@ -198,6 +217,9 @@ class ProductCore:
          response to match
         :param regexp: "False" for str to match, "True" for regular
          expression to match
+        :param fail_pattern: Pattern or list of patterns whose presence in the
+         output immediately terminates the read and returns FAILED. Respects
+         the ``regexp`` flag.
         :raises ValueError:
         :raises DeviceError: Communication error with device
         :raises TimeoutError: Response timeout
@@ -207,6 +229,11 @@ class ProductCore:
         cmd = self._prepare_command(cmd, args)
         pattern = self._prepare_pattern(cmd, expects, flag, match_all, regexp)
         cmd_bytes, pattern_bytes = self._encode_for_device(cmd, pattern)
+        fail_pattern_bytes = (
+            self._build_fail_pattern_bytes(fail_pattern, regexp)
+            if fail_pattern
+            else None
+        )
 
         logger.debug(
             f"Sending command: {cmd}, expecting: "
@@ -214,7 +241,10 @@ class ProductCore:
         )
 
         cmdret = self._device.send_cmd_read_until_pattern(
-            cmd_bytes, pattern=pattern_bytes, timeout=timeout
+            cmd_bytes,
+            pattern=pattern_bytes,
+            timeout=timeout,
+            fail_pattern=fail_pattern_bytes,
         )
 
         if cmdret.valid_match() and self._match_not_found(cmdret.rematch):
@@ -228,6 +258,9 @@ class ProductCore:
         pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
+        fail_pattern: Optional[
+            Union[str, bytes, List[Union[str, bytes]]]
+        ] = None,
     ) -> CmdReturn:
         """Send command to device and read until a specific pattern.
 
@@ -238,6 +271,9 @@ class ProductCore:
         :param args: List of additional arguments to append to the command
          or None
         :param timeout: (int) timeout value in seconds, default 30s.
+        :param fail_pattern: (str, bytes, or list of (str, bytes)) Regex
+         pattern or list of patterns whose presence in the output immediately
+         terminates the read and returns FAILED.
 
         :return: CmdReturn : command return data
         """
@@ -245,13 +281,31 @@ class ProductCore:
         pattern = self._default_prompt_pattern(cmd) if not pattern else pattern
         cmd_bytes, pattern_bytes = self._encode_for_device(cmd, pattern)
 
+        fail_pattern_bytes: Optional[bytes] = None
+        if fail_pattern:
+            fp_list = (
+                fail_pattern
+                if isinstance(fail_pattern, list)
+                else [fail_pattern]
+            )
+            decoded = [
+                p.decode("utf-8") if isinstance(p, bytes) else p
+                for p in fp_list
+            ]
+            fail_pattern_bytes = "|".join(f"(?:{p})" for p in decoded).encode(
+                "utf-8"
+            )
+
         logger.debug(
             f"Sending command: {cmd}, expecting pattern: "
             f"{pattern.decode() if isinstance(pattern, bytes) else pattern} "
             f"(timeout={timeout}s)"
         )
         return self._device.send_cmd_read_until_pattern(
-            cmd_bytes, pattern=pattern_bytes, timeout=timeout
+            cmd_bytes,
+            pattern=pattern_bytes,
+            timeout=timeout,
+            fail_pattern=fail_pattern_bytes,
         )
 
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802

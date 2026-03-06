@@ -19,7 +19,7 @@
 ############################################################################
 
 import re
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -97,6 +97,18 @@ def test_core_internals(envconfig_dummy):
         b = re.match(rb"command not found", b"command not found")
         assert p._match_not_found(b) is True
 
+        # _build_fail_pattern_bytes
+        assert p._build_fail_pattern_bytes("ERROR", False) == b"(?:ERROR)"
+        assert p._build_fail_pattern_bytes("err.+", True) == b"(?:err.+)"
+        assert (
+            p._build_fail_pattern_bytes(["ERR", "PANIC"], False)
+            == b"(?:ERR)|(?:PANIC)"
+        )
+        # literal (regexp=False) escapes special chars
+        assert (
+            p._build_fail_pattern_bytes(r"err\d+", False) == rb"(?:err\\d\+)"
+        )
+
 
 def test_core_send_command(envconfig_dummy):
 
@@ -158,6 +170,108 @@ def test_core_send_command_read_until_pattern(envconfig_dummy):
         assert p.sendCommandReadUntilPattern("test", "test") == CmdReturn(
             CmdStatus.SUCCESS
         )
+
+
+def test_core_send_command_fail_pattern(envconfig_dummy):
+
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        dev.prompt = b"NSH> "
+        dev.no_cmd = "command not found"
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS
+        )
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        # no fail_pattern: device called without fail_pattern kwarg
+        p.sendCommand("test")
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test", pattern=ANY, timeout=30, fail_pattern=None
+        )
+
+        # literal string: encoded as escaped bytes regex
+        p.sendCommand("test", fail_pattern="ERROR")
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test", pattern=ANY, timeout=30, fail_pattern=b"(?:ERROR)"
+        )
+
+        # list of literals
+        p.sendCommand("test", fail_pattern=["ERR", "PANIC"])
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test",
+            pattern=ANY,
+            timeout=30,
+            fail_pattern=b"(?:ERR)|(?:PANIC)",
+        )
+
+        # regexp=True: patterns passed as-is (not escaped)
+        p.sendCommand("test", fail_pattern=r"err\d+", regexp=True)
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test",
+            pattern=ANY,
+            timeout=30,
+            fail_pattern=rb"(?:err\d+)",
+        )
+
+        # device returns FAILED → propagated as-is
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.FAILED
+        )
+        assert p.sendCommand("test", fail_pattern="ERROR") == CmdStatus.FAILED
+
+        # device returns SUCCESS without fail_pattern → SUCCESS
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS
+        )
+        assert p.sendCommand("test", fail_pattern="ERROR") == CmdStatus.SUCCESS
+
+
+def test_core_send_command_read_until_pattern_fail_pattern(envconfig_dummy):
+    with patch("ntfc.device.common.DeviceCommon") as mockdevice:
+        dev = mockdevice.return_value
+        dev._main_prompt = "nsh>"
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.SUCCESS
+        )
+        p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
+
+        # no fail_pattern: device called with fail_pattern=None
+        p.sendCommandReadUntilPattern("test", "test")
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test", pattern=b"test", timeout=30, fail_pattern=None
+        )
+
+        # str fail_pattern encoded to bytes
+        p.sendCommandReadUntilPattern("test", "test", fail_pattern="ERROR")
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test", pattern=b"test", timeout=30, fail_pattern=b"(?:ERROR)"
+        )
+
+        # bytes fail_pattern
+        p.sendCommandReadUntilPattern("test", "test", fail_pattern=b"PANIC")
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test", pattern=b"test", timeout=30, fail_pattern=b"(?:PANIC)"
+        )
+
+        # list of str/bytes OR-joined
+        p.sendCommandReadUntilPattern(
+            "test", "test", fail_pattern=["ERR", b"CRASH"]
+        )
+        dev.send_cmd_read_until_pattern.assert_called_with(
+            b"test",
+            pattern=b"test",
+            timeout=30,
+            fail_pattern=b"(?:ERR)|(?:CRASH)",
+        )
+
+        # device returns FAILED → returned as-is
+        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
+            CmdStatus.FAILED
+        )
+        result = p.sendCommandReadUntilPattern(
+            "test", "test", fail_pattern="ERROR"
+        )
+        assert result.status == CmdStatus.FAILED
 
 
 def test_core_send_ctrl_cmd(envconfig_dummy):

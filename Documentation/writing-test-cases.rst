@@ -511,11 +511,13 @@ instances:
    * - Method
      - Description
      - Example
-   * - ``sendCommand(cmd, expects, args, timeout, ...)``
-     - Send command and wait for expected response (list or regex).
+   * - ``sendCommand(cmd, expects, args, timeout, ..., fail_pattern)``
+     - Send command and wait for expected response (list or regex). Returns
+       ``CmdStatus.FAILED`` if ``fail_pattern`` is found in the output.
      - ``pytest.product.sendCommand("ls", ["root"], timeout=15)``
-   * - ``sendCommandReadUntilPattern(cmd, pattern, args, timeout)``
-     - Send command and read until a specific pattern is found.
+   * - ``sendCommandReadUntilPattern(cmd, pattern, args, timeout, fail_pattern)``
+     - Send command and read until a specific pattern is found. Returns
+       ``CmdStatus.FAILED`` if ``fail_pattern`` is found in the output.
      - ``pytest.product.sendCommandReadUntilPattern("hi", "Hi", timeout=15)``
    * - ``sendCtrlCmd(ctrl_char)``
      - Send a control character (e.g., ``"c"`` for Ctrl+C).
@@ -523,3 +525,51 @@ instances:
    * - ``reboot(timeout)``
      - Reboot the target(s).
      - ``pytest.product.reboot()``
+
+Fail Pattern Detection
+-----------------------
+
+Both ``sendCommand`` and ``sendCommandReadUntilPattern`` accept an optional
+``fail_pattern`` argument. When the pattern is found anywhere in the command
+output the call returns ``CmdStatus.FAILED`` (-3), regardless of whether the
+success pattern also matched. This lets tests fail explicitly on known error
+strings without having to parse the return value manually.
+
+``fail_pattern`` accepts the same types as the corresponding ``expects`` /
+``pattern`` argument: a single string (or bytes), or a list of strings/bytes.
+For ``sendCommand`` the ``regexp`` flag also applies to ``fail_pattern``.
+
+.. code-block:: python
+
+   import pytest
+   from ntfc.device.common import CmdStatus
+
+   def test_no_errors():
+       # Fail if "ERROR" or "PANIC" appears anywhere in the output
+       ret = pytest.product.sendCommand(
+           "run_test",
+           ["PASSED"],
+           fail_pattern=["ERROR", "PANIC"],
+           timeout=30,
+       )
+       assert ret == CmdStatus.SUCCESS
+
+   def test_no_errors_regex():
+       # Fail on regex pattern (e.g. any "err<digits>" string)
+       ret = pytest.product.sendCommand(
+           "run_test",
+           ["PASSED"],
+           fail_pattern=r"err\d+",
+           regexp=True,
+           timeout=30,
+       )
+       assert ret == CmdStatus.SUCCESS
+
+   def test_read_until_no_crash():
+       ret = pytest.product.sendCommandReadUntilPattern(
+           "long_cmd",
+           "Done",
+           fail_pattern=["Assertion failed", "kernel panic"],
+           timeout=60,
+       )
+       assert ret.status == CmdStatus.SUCCESS

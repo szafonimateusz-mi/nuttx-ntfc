@@ -138,6 +138,42 @@ def test_device_common_send_cmd_pattern():
         assert ret.status == CmdStatus.TIMEOUT
 
 
+def test_device_common_send_cmd_fail_pattern():
+
+    with patch("ntfc.envconfig.EnvConfig") as mockdevice:
+
+        global g_mock_read
+
+        config = mockdevice.return_value
+        dev = DeviceMock(config)
+
+        # fail_pattern detected before success pattern → FAILED, exits early
+        g_mock_read = b"ERROR: something bad"
+        ret = dev.send_cmd_read_until_pattern(
+            b"", b"SUCCESS", 10, fail_pattern=b"ERROR"
+        )
+        assert ret.status == CmdStatus.FAILED
+
+        # success pattern present, no fail_pattern → SUCCESS
+        g_mock_read = b"SUCCESS"
+        ret = dev.send_cmd_read_until_pattern(
+            b"", b"SUCCESS", 10, fail_pattern=b"ERROR"
+        )
+        assert ret.status == CmdStatus.SUCCESS
+
+        # neither pattern → TIMEOUT
+        g_mock_read = b"normal output"
+        ret = dev.send_cmd_read_until_pattern(
+            b"", b"SUCCESS", 1, fail_pattern=b"ERROR"
+        )
+        assert ret.status == CmdStatus.TIMEOUT
+
+        # no fail_pattern → behaves as before
+        g_mock_read = b"SUCCESS"
+        ret = dev.send_cmd_read_until_pattern(b"", b"SUCCESS", 10)
+        assert ret.status == CmdStatus.SUCCESS
+
+
 def test_device_common_panic_char():
 
     with patch("ntfc.device.common.get_os") as mock_get_os:

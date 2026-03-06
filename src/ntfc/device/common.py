@@ -49,6 +49,7 @@ class CmdStatus(IntEnum):
     SUCCESS = 0
     NOTFOUND = -1
     TIMEOUT = -2
+    FAILED = -3
 
     def __str__(self) -> str:
         """Return enum string."""
@@ -255,7 +256,11 @@ class DeviceCommon(ABC):
 
     @DeviceStateManager.mark_command
     def send_cmd_read_until_pattern(  # noqa: C901
-        self, cmd: bytes, pattern: bytes, timeout: int
+        self,
+        cmd: bytes,
+        pattern: bytes,
+        timeout: int,
+        fail_pattern: Optional[bytes] = None,
     ) -> CmdReturn:
         """Send command to device and read until the specified pattern.
 
@@ -266,6 +271,8 @@ class DeviceCommon(ABC):
          The pattern will be converted to bytes for matching.
          Default is None.
         :param timeout: (int) timeout value in seconds
+        :param fail_pattern: (bytes, optional) Regex pattern whose presence in
+         the output immediately terminates the read and returns FAILED.
 
         :return: CmdReturn : command return data
         """
@@ -308,6 +315,13 @@ class DeviceCommon(ABC):
             output_max = 100000
             if len(output) > output_max:  # pragma: no cover
                 output = output[-output_max:]
+
+            if fail_pattern and re.search(fail_pattern, output):
+                logger.debug(
+                    f">>fail match: {output!r}, search: {fail_pattern!r}<<"
+                )
+                ret = CmdStatus.FAILED
+                break
 
             _match = re.search(pattern, output)
             if _match:
