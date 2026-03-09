@@ -38,6 +38,7 @@ class ProductConfig:
 
         # Use dictionary to store cores, key is core name from config
         self._cores: Dict[str, CoreConfig] = {}
+        self._core_index_to_name: Dict[int, str] = {}
         self._init_cores()
 
     def _init_cores(self) -> None:
@@ -53,23 +54,21 @@ class ProductConfig:
             ):
                 continue
 
-            # Get core name from config (e.g., 'main', 'cpu1', 'cpu2')
-            core_name = core_data.get("name", "")
-            if not core_name:
-                # Fallback: generate name from index if not specified
-                try:
-                    core_index = int(
-                        core_key[4:]
-                    )  # Extract number from "coreX"
-                    core_name = (
-                        "main" if core_index == 0 else f"cpu{core_index}"
-                    )
-                except (ValueError, IndexError):
-                    logger.warning(f"Invalid core key: {core_key}")
-                    continue
+            # Parse index from "coreX" key
+            try:
+                core_index = int(core_key[4:])
+            except (ValueError, IndexError):
+                logger.warning(f"Invalid core key: {core_key}")
+                continue
 
-            # Create CoreConfig and store with core name as key
+            # Get core name from config; fall back to "main"/"cpuN"
+            core_name: str = core_data.get("name", "")
+            if not core_name:
+                core_name = "main" if core_index == 0 else f"cpu{core_index}"
+
+            # Store CoreConfig and index→name mapping
             self._cores[core_name] = CoreConfig(core_data)
+            self._core_index_to_name[core_index] = core_name
 
     @property
     def config(self) -> Any:
@@ -104,23 +103,9 @@ class ProductConfig:
             return core
 
         if isinstance(core, int):
-            # Convert index to name by searching in config
-            for core_key, core_data in self.cores.items():
-                if core_key.startswith("core") and isinstance(core_data, dict):
-                    try:
-                        core_index = int(
-                            core_key[4:]
-                        )  # Extract number from "coreX"
-                        if core_index == core:
-                            # Found matching core, get its name
-                            core_name: str = core_data.get(
-                                "name", "main" if core == 0 else f"cpu{core}"
-                            )
-                            return core_name
-                    except (ValueError, IndexError):
-                        continue
-            # Fallback to standard naming if not found in config
-            return "main" if core == 0 else f"cpu{core}"
+            return self._core_index_to_name.get(
+                core, "main" if core == 0 else f"cpu{core}"
+            )
 
         raise TypeError(f"core must be int or str, got {type(core)}")
 
