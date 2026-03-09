@@ -47,7 +47,11 @@ def test_main(runner):
     assert result.exit_code == 0
 
 
-def test_main_collect(runner):
+def test_main_collect(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
 
     args = [
         "collect",
@@ -94,7 +98,11 @@ def test_main_collect(runner):
     assert result.exit_code == 0
 
 
-def test_main_collect_debug(runner):
+def test_main_collect_debug(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.pytest.mypytest.MyPytest._device_start",
+        lambda *_args, **_kwargs: None,
+    )
 
     args = [
         "--debug",

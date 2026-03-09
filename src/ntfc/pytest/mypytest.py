@@ -39,6 +39,7 @@ from ntfc.products import ProductsHandler
 from .collected import Collected
 from .collector import CollectorPlugin
 from .configure import PytestConfigPlugin
+from .parsers import ParserPlugin
 from .runner import RunnerPlugin
 from .signal_plugin import SignalPlugin
 
@@ -110,6 +111,7 @@ class MyPytest:
         # add our custom pytest plugin
         self._plugins.append(self._ptconfig)
         self._plugins.append(SignalPlugin())
+        self._plugins.append(ParserPlugin())
 
     def _write_session_config(self, result_dir: str) -> None:
         """Write resolved session configuration into result directory."""
@@ -346,6 +348,10 @@ class MyPytest:
         # initialize pytest env
         if reinit:  # pragma: no cover
             self._init_pytest(testpath)
+
+        # start device so that C-framework parsers (cmocka, gtest) can
+        # query the binary for test names during pytest_generate_tests
+        self._device_start()
 
         # collector plugin
         collector = CollectorPlugin(self._config, True)
