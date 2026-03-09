@@ -136,3 +136,33 @@ def test_envconfig_extra_check(envconfig_dummy):
 
     # Test with empty string
     assert envconfig_dummy.extra_check("") is False
+
+
+def test_envconfig_recovery_defaults():
+    """Test recovery property returns defaults when no config."""
+    conf = None
+    with open("./tests/resources/nuttx/sim/config.yaml", "r") as f:
+        conf = yaml.safe_load(f)
+
+    env = EnvConfig(conf)
+    recovery = env.recovery
+    assert recovery["max_retries"] == 3
+    assert recovery["base_delay"] == 2.0
+    assert recovery["reboot_timeout"] == 30
+
+
+def test_envconfig_recovery_custom():
+    """Test recovery property merges custom config."""
+    conf = None
+    with open("./tests/resources/nuttx/sim/config.yaml", "r") as f:
+        conf = yaml.safe_load(f)
+
+    conf.setdefault("config", {})["recovery"] = {
+        "max_retries": 5,
+        "base_delay": 1.0,
+    }
+    env = EnvConfig(conf)
+    recovery = env.recovery
+    assert recovery["max_retries"] == 5
+    assert recovery["base_delay"] == 1.0
+    assert recovery["reboot_timeout"] == 30  # default preserved

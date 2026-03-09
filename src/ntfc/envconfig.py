@@ -98,6 +98,24 @@ class EnvConfig:
         # Merge with defaults
         return {**default_config, **heartbeat_cfg}
 
+    @property
+    def recovery(self) -> Dict[str, Any]:
+        """Return device recovery configuration.
+
+        :return: Dictionary with keys: 'max_retries' (int),
+            'base_delay' (float), 'reboot_timeout' (int).
+            Defaults to 3 retries, 2s base delay, 30s reboot timeout.
+        """
+        default_config = {
+            "max_retries": 3,
+            "base_delay": 2.0,
+            "reboot_timeout": 30,
+        }
+        config = self._cfg_values.get("config", {})
+        recovery_cfg = config.get("recovery", {})
+
+        return {**default_config, **recovery_cfg}
+
     # dep_config
     def kv_check(self, cfg: str, product: int = 0, core: int | str = 0) -> Any:
         """Check Kconfig option.

@@ -86,10 +86,6 @@ class DeviceStateManager:
     with a single, coherent state representation that supports optional
     change notifications and typed crash detection.
 
-    Includes active heartbeat monitoring (via :class:`HeartbeatMonitor`) to
-    detect busyloop scenarios where the device keeps flooding logs but cannot
-    respond to commands.
-
     :param busyloop_threshold: Seconds of silence before the device is
         declared to be in a busy loop.  Defaults to ``180.0``.
     :param on_state_change: Optional callback invoked on every state change.
@@ -346,6 +342,7 @@ class DeviceStateManager:
             self._current_state = new_state
             if crash_type is not None:
                 self._crash_type = crash_type
+
         logger.debug(
             "device state: %s -> %s (%s)",
             old_state.name,

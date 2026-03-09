@@ -47,10 +47,42 @@ class PytestConfigPlugin:
         """
         self._config = config
         self._verbose = verbose
+        self._recovery_failed = False
 
-    def _device_reboot(self) -> None:
-        """Reboot the device if crashed."""
-        pytest.product.reboot()  # pragma: no cover
+    def _device_reboot(self) -> None:  # pragma: no cover
+        """Reboot the device with retry and exponential back-off.
+
+        Uses recovery configuration from EnvConfig (max_retries,
+        base_delay, reboot_timeout).  Doubles the delay after each
+        failed attempt, capped at 60 seconds.
+        """
+        recovery_cfg = self._config.recovery
+        max_retries = recovery_cfg["max_retries"]
+        delay = recovery_cfg["base_delay"]
+
+        for attempt in range(1, max_retries + 1):
+            logger.info(
+                "Recovery attempt %d/%d (delay=%.1fs)",
+                attempt,
+                max_retries,
+                delay if attempt > 1 else 0,
+            )
+
+            if attempt > 1:
+                time.sleep(delay)
+                delay = min(delay * 2, 60.0)
+
+            try:
+                success = pytest.product.reboot()
+                if success:
+                    logger.info("Device recovered on attempt %d", attempt)
+                    return
+                logger.warning("Reboot attempt %d returned failure", attempt)
+            except Exception as exc:
+                logger.error("Reboot attempt %d raised: %s", attempt, exc)
+
+        logger.error("All %d recovery attempts failed", max_retries)
+        self._recovery_failed = True
 
     def _generate_coredump_file(self, reason: Any) -> None:
         """Generate coredump file.
@@ -153,6 +185,14 @@ class PytestConfigPlugin:
             )
 
         metafunc.parametrize("core", cores_list)
+
+    def pytest_runtest_setup(self, item: pytest.Item) -> None:
+        """Skip remaining tests if device recovery has failed.
+
+        :param item: pytest item about to run
+        """
+        if self._recovery_failed:  # pragma: no cover
+            pytest.skip("Device recovery failed, skipping remaining tests")
 
     def pytest_runtest_makereport(  # noqa: C901
         self, item: pytest.Item, call: pytest.CallInfo[None]

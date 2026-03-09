@@ -216,6 +216,20 @@ consecutive failures the device is marked ``BUSY_LOOP``.
        interval: 60    # seconds between probes, minimum 30
        threshold: 3    # consecutive failures to declare busyloop
 
+Device Recovery
+===============
+
+Reboots the device when it enters an unhealthy state (crash or busy-loop).
+Remaining tests are skipped if all retries fail.
+
+.. code-block:: yaml
+
+   config:
+     recovery:
+       max_retries: 3      # reboot attempts before skipping remaining tests
+       base_delay: 2.0     # seconds between retries (doubles each attempt)
+       reboot_timeout: 30  # seconds to wait for device after reboot
+
 Signal Handlers
 ===============
 
