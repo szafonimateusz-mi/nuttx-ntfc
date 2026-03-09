@@ -129,14 +129,9 @@ class CoresHandler:
             # AMP mode: Execute in parallel on all cores
             results = run_parallel(
                 self._cores,
-                "sendCommand",
-                cmd,
-                expects,
-                args,
-                timeout,
-                flag,
-                match_all,
-                regexp,
+                lambda c: c.sendCommand(
+                    cmd, expects, args, timeout, flag, match_all, regexp
+                ),
             )
 
             for idx, ret in enumerate(results):
@@ -171,11 +166,9 @@ class CoresHandler:
             # AMP mode: Execute in parallel on all cores
             results = run_parallel(
                 self._cores,
-                "sendCommandReadUntilPattern",
-                cmd,
-                pattern,
-                args,
-                timeout,
+                lambda c: c.sendCommandReadUntilPattern(
+                    cmd, pattern, args, timeout
+                ),
             )
 
             for idx, ret in enumerate(results):
@@ -209,10 +202,7 @@ class CoresHandler:
         else:
             results = run_parallel(
                 self._cores,
-                "readUntilPattern",
-                pattern,
-                timeout,
-                fail_pattern,
+                lambda c: c.readUntilPattern(pattern, timeout, fail_pattern),
             )
 
             for idx, ret in enumerate(results):
@@ -226,11 +216,11 @@ class CoresHandler:
 
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Send ctrl command to all cores in parallel."""
-        run_parallel(self._cores, "sendCtrlCmd", ctrl_char)
+        run_parallel(self._cores, lambda c: c.sendCtrlCmd(ctrl_char))
 
     def reboot(self, timeout: int = 30) -> bool:
         """Run reboot for all cores in parallel."""
-        results = run_parallel(self._cores, "reboot", timeout)
+        results = run_parallel(self._cores, lambda c: c.reboot(timeout))
         for idx, result in enumerate(results):
             if not result:
                 logger.info(f"reboot failed for core {self._cores[idx]}")
@@ -238,7 +228,7 @@ class CoresHandler:
 
     def force_panic(self, timeout: int = 30) -> bool:
         """Force panic for all cores in parallel."""
-        results = run_parallel(self._cores, "force_panic", timeout)
+        results = run_parallel(self._cores, lambda c: c.force_panic(timeout))
         for idx, result in enumerate(results):
             if not result:
                 logger.info(f"force_panic failed for core {self._cores[idx]}")
@@ -247,7 +237,7 @@ class CoresHandler:
     @property
     def busyloop(self) -> bool:
         """Get busyloop flag from cores in parallel."""
-        results = run_parallel(self._cores, "busyloop")
+        results = run_parallel(self._cores, lambda c: c.busyloop)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"busyloop for core {self._cores[idx]}")
@@ -257,7 +247,7 @@ class CoresHandler:
     @property
     def flood(self) -> bool:
         """Get flood flag from cores in parallel."""
-        results = run_parallel(self._cores, "flood")
+        results = run_parallel(self._cores, lambda c: c.flood)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"flood for core {self._cores[idx]}")
@@ -267,7 +257,7 @@ class CoresHandler:
     @property
     def crash(self) -> bool:
         """Get crash flag from cores in parallel."""
-        results = run_parallel(self._cores, "crash")
+        results = run_parallel(self._cores, lambda c: c.crash)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"crash for core {self._cores[idx]}")
@@ -277,7 +267,7 @@ class CoresHandler:
     @property
     def notalive(self) -> bool:
         """Get notalive flag from cores in parallel."""
-        results = run_parallel(self._cores, "notalive")
+        results = run_parallel(self._cores, lambda c: c.notalive)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"notalive for core {self._cores[idx]}")
@@ -316,4 +306,4 @@ class CoresHandler:
 
     def stop_log_collect(self) -> None:
         """Stop log collection for all cores in parallel."""
-        run_parallel(self._cores, "stop_log_collect")
+        run_parallel(self._cores, lambda c: c.stop_log_collect())

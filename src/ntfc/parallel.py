@@ -21,7 +21,7 @@
 """Parallel execution utilities for handlers."""
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, List, TypeVar
+from typing import Any, Callable, List, TypeVar
 
 from ntfc.log.logger import logger
 
@@ -30,49 +30,34 @@ T = TypeVar("T")
 
 def run_parallel(
     items: List[T],
-    attr_name: str,
-    *args: Any,
-    **kwargs: Any,
+    fn: Callable[[T], Any],
 ) -> List[Any]:
-    """Run a method/property on all items in parallel.
+    """Run a callable on all items in parallel, preserving order.
 
-    Supports both methods (with args) and properties (no args).
-
-    :param items: List of objects to execute on
-    :param attr_name: Name of method or property to call
-    :param args: Positional arguments to pass to the method
-    :param kwargs: Keyword arguments to pass to the method
-    :return: List of results in original order
+    :param items: List of objects to execute on.
+    :param fn: Callable invoked with each item as its sole argument.
+    :return: List of results in the same order as *items*.
     """
 
     def worker(index_item: tuple[int, T]) -> tuple[int, Any]:
-        """Call method/property on item and return indexed result.
+        """Invoke *fn* on one item and return an indexed result.
 
-        :param index_item: Tuple of (index, item)
-        :return: Tuple of (index, result) for ordering preservation
+        :param index_item: Tuple of (index, item).
+        :return: Tuple of (index, result) for ordering preservation.
         """
         index, item = index_item
         try:
-            attr = getattr(item, attr_name)
-            # Handle both properties and methods
-            if callable(attr):
-                result = attr(*args, **kwargs)
-            else:
-                result = attr
-            return (index, result)
+            return (index, fn(item))
         except Exception as e:  # pragma: no cover
             logger.error(
-                f"Exception in parallel call to {attr_name} "
-                f"for item {item}: {e}"
+                f"Exception in parallel execution for item {item}: {e}"
             )
             return (index, None)
 
-    # Execute all workers in parallel
     with ThreadPoolExecutor(max_workers=len(items)) as executor:
         indexed_items = list(enumerate(items))
         futures = [executor.submit(worker, item) for item in indexed_items]
 
-        # Collect results in original order
         results: List[Any] = [None] * len(items)
         for future in futures:
             index, result = future.result()

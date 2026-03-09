@@ -58,14 +58,9 @@ class ProductsHandler:
         """Send command to all products in parallel."""
         results = run_parallel(
             self._products,
-            "sendCommand",
-            cmd,
-            expects,
-            args,
-            timeout,
-            flag,
-            match_all,
-            regexp,
+            lambda p: p.sendCommand(
+                cmd, expects, args, timeout, flag, match_all, regexp
+            ),
         )
 
         for idx, ret in enumerate(results):
@@ -87,11 +82,9 @@ class ProductsHandler:
         """Send command to all products in parallel."""
         results = run_parallel(
             self._products,
-            "sendCommandReadUntilPattern",
-            cmd,
-            pattern,
-            args,
-            timeout,
+            lambda p: p.sendCommandReadUntilPattern(
+                cmd, pattern, args, timeout
+            ),
         )
 
         for idx, ret in enumerate(results):
@@ -115,10 +108,7 @@ class ProductsHandler:
         """Read device output until pattern on all products in parallel."""
         results = run_parallel(
             self._products,
-            "readUntilPattern",
-            pattern,
-            timeout,
-            fail_pattern,
+            lambda p: p.readUntilPattern(pattern, timeout, fail_pattern),
         )
 
         for idx, ret in enumerate(results):
@@ -133,12 +123,12 @@ class ProductsHandler:
 
     def sendCtrlCmd(self, ctrl_char: str) -> None:  # noqa: N802
         """Send ctrl command to all products in parallel."""
-        run_parallel(self._products, "sendCtrlCmd", ctrl_char)
+        run_parallel(self._products, lambda p: p.sendCtrlCmd(ctrl_char))
 
     @property
     def busyloop(self) -> bool:
         """Get busyloop flag from products in parallel."""
-        results = run_parallel(self._products, "busyloop")
+        results = run_parallel(self._products, lambda p: p.busyloop)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"busyloop for product {self._products[idx]}")
@@ -148,7 +138,7 @@ class ProductsHandler:
     @property
     def flood(self) -> bool:
         """Get flood flag from products in parallel."""
-        results = run_parallel(self._products, "flood")
+        results = run_parallel(self._products, lambda p: p.flood)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"flood for product {self._products[idx]}")
@@ -158,7 +148,7 @@ class ProductsHandler:
     @property
     def crash(self) -> bool:
         """Get crash flag from products in parallel."""
-        results = run_parallel(self._products, "crash")
+        results = run_parallel(self._products, lambda p: p.crash)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"crash for product {self._products[idx]}")
@@ -168,7 +158,7 @@ class ProductsHandler:
     @property
     def notalive(self) -> bool:
         """Get notalive flag from products in parallel."""
-        results = run_parallel(self._products, "notalive")
+        results = run_parallel(self._products, lambda p: p.notalive)
         for idx, result in enumerate(results):
             if result:
                 logger.info(f"notalive for product {self._products[idx]}")
@@ -177,7 +167,7 @@ class ProductsHandler:
 
     def reboot(self) -> bool:
         """Run reboot for all products in parallel."""
-        results = run_parallel(self._products, "reboot")
+        results = run_parallel(self._products, lambda p: p.reboot())
         for idx, result in enumerate(results):
             if not result:
                 logger.info(f"reboot failed for product {self._products[idx]}")
@@ -185,7 +175,7 @@ class ProductsHandler:
 
     def force_panic(self) -> bool:
         """Force panic for all products in parallel."""
-        results = run_parallel(self._products, "force_panic")
+        results = run_parallel(self._products, lambda p: p.force_panic())
         for idx, result in enumerate(results):
             if not result:
                 logger.info(
