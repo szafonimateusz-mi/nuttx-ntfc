@@ -28,6 +28,7 @@ import pytest
 
 from ntfc.parsers.base import TestItem as _Item
 from ntfc.parsers.cmocka import CmockaParser
+from ntfc.parsers.gtest import GtestParser
 from ntfc.pytest.parsers import (
     PARSER_FIXTURES,
     ParserPlugin,
@@ -76,7 +77,9 @@ def _make_core(device_items=None):
 
 def test_parser_fixtures_contains_expected_keys():
     assert "cmocka_parser" in PARSER_FIXTURES
+    assert "gtest_parser" in PARSER_FIXTURES
     assert PARSER_FIXTURES["cmocka_parser"] is CmockaParser
+    assert PARSER_FIXTURES["gtest_parser"] is GtestParser
 
 
 def test_read_parser_marker_no_marker():
@@ -258,3 +261,18 @@ def test_cmocka_parser_fixture(monkeypatch):
     parser = plugin.cmocka_parser.__wrapped__(plugin, request)
     assert isinstance(parser, CmockaParser)
     assert parser.test_name == "test_foo"
+
+
+def test_gtest_parser_fixture(monkeypatch):
+    plugin = ParserPlugin()
+    core = _make_core()
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    request = SimpleNamespace(
+        param="Suite.test_bar",
+        node=_make_node(binary="gtest_bin"),
+    )
+    parser = plugin.gtest_parser.__wrapped__(plugin, request)
+    assert isinstance(parser, GtestParser)
+    assert parser.test_name == "Suite.test_bar"

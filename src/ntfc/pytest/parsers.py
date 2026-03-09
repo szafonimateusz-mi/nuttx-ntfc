@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type
 import pytest
 
 from ntfc.parsers.cmocka import CmockaParser
+from ntfc.parsers.gtest import GtestParser
 
 if TYPE_CHECKING:
     from ntfc.parsers.base import AbstractTestParser, TestItem
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
 # Map fixture name → parser class
 PARSER_FIXTURES: Dict[str, Type["AbstractTestParser"]] = {
     "cmocka_parser": CmockaParser,
+    "gtest_parser": GtestParser,
 }
 
 
@@ -107,7 +109,8 @@ class ParserPlugin:
     """Pytest plugin that turns C test frameworks into parametrized items.
 
     Register the ``parser_binary`` marker and expand ``cmocka_parser``
-    fixtures into one pytest item per discovered C test case.
+    / ``gtest_parser`` fixtures into one pytest item per discovered C
+    test case.
     """
 
     def pytest_configure(self, config: pytest.Config) -> None:
@@ -153,4 +156,14 @@ class ParserPlugin:
         :return: Configured CmockaParser instance.
         """
         parser = _make_parser(CmockaParser, request)
+        return parser  # type: ignore[return-value]
+
+    @pytest.fixture  # type: ignore[untyped-decorator]
+    def gtest_parser(self, request: pytest.FixtureRequest) -> GtestParser:
+        """Fixture providing a GtestParser for the current test case.
+
+        :param request: Pytest fixture request (carries ``param``).
+        :return: Configured GtestParser instance.
+        """
+        parser = _make_parser(GtestParser, request)
         return parser  # type: ignore[return-value]

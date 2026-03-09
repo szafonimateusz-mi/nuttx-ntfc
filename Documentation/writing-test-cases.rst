@@ -283,8 +283,8 @@ Available Marks:
      - Skip test conditionally
      - ``@pytest.mark.skip(reason="not ready")``
    * - ``@pytest.mark.parser_binary()``
-     - Discover and run C framework tests (cmocka) as pytest items
-     - ``@pytest.mark.parser_binary("my_bin", filter="test_*")``
+     - Discover and run C framework tests (cmocka / gtest) as pytest items
+     - ``@pytest.mark.parser_binary("my_bin", filter="Suite.*")``
 
 Example - Test Repetition:
 
@@ -296,8 +296,8 @@ Example - Test Repetition:
        ret = pytest.product.sendCommand("test", ["PASS"], timeout=15)
        assert ret == 0
 
-C Framework Parsers (cmocka)
-============================
+C Framework Parsers (cmocka / gtest)
+=====================================
 
 NTFC provides built-in parsers for C test frameworks running directly on the
 NuttX device. Each C-level test case is automatically discovered and mapped
@@ -318,6 +318,10 @@ Supported Frameworks
      - `cmocka <https://cmocka.org/>`_
      - ``<binary> --list``
      - ``<binary> --test <name>``
+   * - ``gtest_parser``
+     - `Google Test <https://google.github.io/googletest/>`_
+     - ``<binary> --gtest_list_tests``
+     - ``<binary> --gtest_filter=<name>``
 
 Basic Usage
 -----------
@@ -325,19 +329,26 @@ Basic Usage
 Add the ``@pytest.mark.parser_binary`` marker and request the corresponding
 fixture. The marker takes the **NuttX shell command name** of the binary under
 test — the same name you would type at the ``nsh>`` prompt to run it (e.g.
-``cmocka_audio``). NTFC discovers all C tests at collection time and
-parametrizes the Python test function automatically — one pytest item per C
-test case.
+``cmocka_audio``, ``gtest_media``). NTFC discovers all C tests at collection
+time and parametrizes the Python test function automatically — one pytest item
+per C test case.
 
 .. code-block:: python
 
    import pytest
 
+   # ---- cmocka --------------------------------------------------------
    # "cmocka_bin" is the NuttX shell command that runs the cmocka binary,
    # e.g. the name registered in the NuttX application Makefile (PROGNAME).
    @pytest.mark.parser_binary("cmocka_bin")
    def test_cmocka_suite(cmocka_parser):
        result = cmocka_parser.run_single()
+
+   # ---- Google Test (gtest) -------------------------------------------
+   # "gtest_bin" is the NuttX shell command that runs the gtest binary.
+   @pytest.mark.parser_binary("gtest_bin")
+   def test_gtest_suite(gtest_parser):
+       result = gtest_parser.run_single()
 
 Pytest output for a binary with three C tests:
 
@@ -355,9 +366,9 @@ C tests whose names match the shell-style wildcard pattern.
 
 .. code-block:: python
 
-   @pytest.mark.parser_binary("cmocka_bin", filter="test_audio_*")
-   def test_audio_only(cmocka_parser):
-       result = cmocka_parser.run_single()
+   @pytest.mark.parser_binary("gtest_bin", filter="Suite1.*")
+   def test_suite1_only(gtest_parser):
+       result = gtest_parser.run_single()
        assert result.passed, result.output
 
 The filter is applied by NTFC using :func:`fnmatch.fnmatch` against the
@@ -377,7 +388,7 @@ discovered test names before parametrization.
      - Description
    * - ``name``
      - ``str``
-     - Full test name (e.g. ``test_foo``)
+     - Full test name (e.g. ``Suite.test_foo`` for gtest)
    * - ``passed``
      - ``bool``
      - ``True`` if the test passed
@@ -394,13 +405,13 @@ Discovery Mechanism
 NTFC tries to resolve test names at collection time in two stages:
 
 1. **ELF symbol scan** — if ``elf_path`` is configured and a valid ELF file
-   is found, :class:`~ntfc.lib.elf.elf_parser.ElfParser` is used.  ``cmocka``
-   currently returns an empty list here (symbols are not reliably named), so
-   the fallback below is always used.
+   is found, :class:`~ntfc.lib.elf.elf_parser.ElfParser` is used.  Both
+   ``cmocka`` and ``gtest`` currently return an empty list here (symbols are
+   not reliably named), so the fallback below is always used.
 
 2. **Device discovery** — the binary is run on the target with the
-   framework's list command (``--list``).  The output is parsed into a list of
-   test names.
+   framework's list command (``--list`` / ``--gtest_list_tests``).  The
+   output is parsed into a list of test names.
 
 Running All or Filtered Tests Programmatically
 ----------------------------------------------
@@ -413,9 +424,9 @@ The parser objects expose additional methods for advanced use cases:
    def test_run_all(cmocka_parser):
        results = cmocka_parser.run_all()   # Dict[str, TestResult]
 
-   @pytest.mark.parser_binary("cmocka_bin")
-   def test_run_filtered(cmocka_parser):
-       results = cmocka_parser.run_filtered("test_audio_*")
+   @pytest.mark.parser_binary("gtest_bin")
+   def test_run_filtered(gtest_parser):
+       results = gtest_parser.run_filtered("Suite.*")
 
 Interaction with Products and Cores
 =====================================
