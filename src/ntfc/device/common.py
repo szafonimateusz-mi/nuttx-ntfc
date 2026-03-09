@@ -37,6 +37,8 @@ if TYPE_CHECKING:
     from ntfc.coreconfig import CoreConfig
     from ntfc.log.handler import LogHandler
 
+_ANSI_ESCAPE_RE = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
 
 ###############################################################################
 # Class: CmdStatus
@@ -214,10 +216,7 @@ class DeviceCommon(ABC):
             # need to sleep for a while, otherwise host CPU load jumps to 100%
             time.sleep(self._read_all_sleep)
 
-        # regex pattern to match ANSI escape sequences
-        ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-        # clean output from garbage
-        clean = ansi_escape.sub(b"", output)
+        clean = _ANSI_ESCAPE_RE.sub(b"", output)
 
         return clean
 
