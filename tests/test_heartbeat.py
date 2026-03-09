@@ -30,19 +30,17 @@ from ntfc.device.state import DeviceState, DeviceStateManager
 class TestDeviceStateManager:
     """Test DeviceStateManager class."""
 
-    def test_state_manager_creation(self, device_dummy):
+    def test_state_manager_creation(self):
         """Test basic state manager creation."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         assert manager is not None
         assert manager._heartbeat._heartbeat_enabled is False
         assert manager._heartbeat._heartbeat_interval == 60
         assert manager._heartbeat._heartbeat_threshold == 3
 
-    def test_enable_disable_heartbeat(self, device_dummy):
+    def test_enable_disable_heartbeat(self):
         """Test enabling and disabling heartbeat monitoring."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Enable heartbeat
         manager.enable_heartbeat(interval=30, threshold=2)
@@ -54,10 +52,9 @@ class TestDeviceStateManager:
         manager.disable_heartbeat()
         assert manager._heartbeat._heartbeat_enabled is False
 
-    def test_update_activity(self, device_dummy):
+    def test_update_activity(self):
         """Test activity update resets timers."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Initially no activity
         initial_time = manager._last_activity_time
@@ -71,25 +68,25 @@ class TestDeviceStateManager:
         assert manager._last_activity_time != initial_time
         assert manager._heartbeat._heartbeat_failures == 0
 
-    def test_check_state_normal(self, device_dummy):
+    def test_check_state_normal(self):
         """Test checking normal device state."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.update_activity()  # Mark as active
 
         state = manager.get_current_state()
         assert state == DeviceState.NORMAL
 
-    def test_get_status(self, device_dummy):
+    def test_get_status(self):
         """Test getting manager status."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.enable_heartbeat(interval=30, threshold=2)
 
         # Verify heartbeat is enabled
         assert manager._heartbeat._heartbeat_enabled is True
         assert manager._heartbeat._heartbeat_interval == 30
         assert manager._heartbeat._heartbeat_threshold == 2
+
+        manager.disable_heartbeat()
 
 
 class TestDeviceHeartbeatIntegration:
@@ -124,10 +121,9 @@ class TestDeviceHeartbeatIntegration:
 class TestHeartbeatMonitorThread:
     """Test heartbeat monitoring background thread."""
 
-    def test_start_monitor_thread(self, device_dummy):
+    def test_start_monitor_thread(self):
         """Test starting the monitor thread."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Start monitoring
         manager.enable_heartbeat(interval=30, threshold=2)
@@ -140,10 +136,9 @@ class TestHeartbeatMonitorThread:
         manager.disable_heartbeat()
         time.sleep(0.2)  # Wait for thread to stop
 
-    def test_start_monitor_thread_already_running(self, device_dummy):
+    def test_start_monitor_thread_already_running(self):
         """Test starting monitor thread when already running."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.enable_heartbeat(interval=30, threshold=2)
 
         # Try to start again
@@ -156,10 +151,9 @@ class TestHeartbeatMonitorThread:
         manager.disable_heartbeat()
         time.sleep(0.2)
 
-    def test_stop_monitor_thread(self, device_dummy):
+    def test_stop_monitor_thread(self):
         """Test stopping the monitor thread."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.enable_heartbeat(interval=30, threshold=2)
 
         # Verify thread is running
@@ -175,18 +169,16 @@ class TestHeartbeatMonitorThread:
             or not manager._heartbeat._monitor_thread.is_alive()
         )
 
-    def test_stop_monitor_thread_not_running(self, device_dummy):
+    def test_stop_monitor_thread_not_running(self):
         """Test stopping monitor thread when not running."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Should not raise error
         manager._heartbeat._stop_monitor_thread()
 
-    def test_monitor_loop_exits_when_disabled(self, device_dummy):
+    def test_monitor_loop_exits_when_disabled(self):
         """Test that monitor loop exits when heartbeat is disabled."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.enable_heartbeat(interval=30, threshold=2)
 
         # Wait a bit
@@ -202,10 +194,9 @@ class TestHeartbeatMonitorThread:
             or not manager._heartbeat._monitor_thread.is_alive()
         )
 
-    def test_should_check_heartbeat_during_command(self, device_dummy):
+    def test_should_check_heartbeat_during_command(self):
         """Test that heartbeat is skipped during command execution."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Mark command as in progress
         manager._heartbeat._in_command = True
@@ -213,15 +204,12 @@ class TestHeartbeatMonitorThread:
         # Should not check heartbeat
         assert not manager._heartbeat._should_check_heartbeat()
 
-    def test_should_check_heartbeat_interval(self, device_dummy):
+    def test_should_check_heartbeat_interval(self):
         """Test heartbeat check based on interval."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         # Set interval to 1 second for faster testing
         # (bypass validation by setting directly)
         manager._heartbeat._heartbeat_interval = 1
-        # Set device as open for heartbeat to work
-        device_dummy._open = True
 
         # Just checked, should not check again
         manager._heartbeat._last_heartbeat_time = time.time()
@@ -235,24 +223,24 @@ class TestHeartbeatMonitorThread:
 class TestHeartbeatCheck:
     """Test heartbeat check execution."""
 
-    def test_check_heartbeat_no_device(self):
-        """Test heartbeat check when device is not set."""
+    def test_check_heartbeat_no_send_fn(self):
+        """Test heartbeat check when send_fn is not set."""
         manager = DeviceStateManager()
-        # Don't set device
+        # Don't configure send_fn
 
-        # Should return True (not fail) when device is None
+        # Should return True (not fail) when send_fn is None
         result = manager._heartbeat._check_heartbeat()
         assert result is True
 
-    def test_check_heartbeat_success(self, device_dummy):
+    def test_check_heartbeat_success(self):
         """Test successful heartbeat check."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Mock successful response
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
+        send_fn = MagicMock(
             return_value=CmdReturn(CmdStatus.SUCCESS, None, "success")
         )
+        manager._heartbeat._send_fn = send_fn
 
         # Perform heartbeat check
         result = manager._heartbeat._check_heartbeat()
@@ -261,16 +249,16 @@ class TestHeartbeatCheck:
         assert result is True
         assert manager._heartbeat._heartbeat_failures == 0
 
-    def test_check_heartbeat_failure_below_threshold(self, device_dummy):
+    def test_check_heartbeat_failure_below_threshold(self):
         """Test heartbeat failure below threshold."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager._heartbeat_threshold = 3
 
         # Mock timeout response
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
+        send_fn = MagicMock(
             return_value=CmdReturn(CmdStatus.TIMEOUT, None, "")
         )
+        manager._heartbeat._send_fn = send_fn
 
         # First failure
         result = manager._heartbeat._check_heartbeat()
@@ -282,16 +270,16 @@ class TestHeartbeatCheck:
         assert result is True
         assert manager._heartbeat._heartbeat_failures == 2
 
-    def test_check_heartbeat_failure_at_threshold(self, device_dummy):
+    def test_check_heartbeat_failure_at_threshold(self):
         """Test heartbeat failure reaching threshold."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager._heartbeat._heartbeat_threshold = 2
 
         # Mock timeout response
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
+        send_fn = MagicMock(
             return_value=CmdReturn(CmdStatus.TIMEOUT, None, "")
         )
+        manager._heartbeat._send_fn = send_fn
 
         # First failure
         manager._heartbeat._check_heartbeat()
@@ -302,32 +290,28 @@ class TestHeartbeatCheck:
         assert result is False
         assert manager.get_current_state() == DeviceState.BUSY_LOOP
 
-    def test_check_heartbeat_exception(self, device_dummy):
+    def test_check_heartbeat_exception(self):
         """Test heartbeat check with exception."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager._heartbeat._heartbeat_threshold = 2
 
         # Mock exception
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
-            side_effect=Exception("Test error")
-        )
+        send_fn = MagicMock(side_effect=Exception("Test error"))
+        manager._heartbeat._send_fn = send_fn
 
         # First exception
         result = manager._heartbeat._check_heartbeat()
         assert result is True  # Still True because below threshold
         assert manager._heartbeat._heartbeat_failures == 1
 
-    def test_check_heartbeat_exception_at_threshold(self, device_dummy):
+    def test_check_heartbeat_exception_at_threshold(self):
         """Test heartbeat exception reaching threshold."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager._heartbeat._heartbeat_threshold = 2
 
         # Mock exception
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
-            side_effect=Exception("Test error")
-        )
+        send_fn = MagicMock(side_effect=Exception("Test error"))
+        manager._heartbeat._send_fn = send_fn
 
         # First exception
         manager._heartbeat._check_heartbeat()
@@ -338,10 +322,9 @@ class TestHeartbeatCheck:
         assert result is False
         assert manager.get_current_state() == DeviceState.BUSY_LOOP
 
-    def test_monitor_loop_exits_on_disabled(self, device_dummy):
+    def test_monitor_loop_exits_on_disabled(self):
         """Test monitor loop exits when heartbeat disabled during run."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
         manager.enable_heartbeat(interval=30, threshold=2)
 
         # Wait for thread to start
@@ -358,10 +341,9 @@ class TestHeartbeatCheck:
             or not manager._heartbeat._monitor_thread.is_alive()
         )
 
-    def test_monitor_loop_with_exception(self, device_dummy):
+    def test_monitor_loop_with_exception(self):
         """Test monitor loop handles exceptions gracefully."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Make _check_heartbeat raise exception
         def failing_check():
@@ -387,12 +369,11 @@ class TestHeartbeatCheck:
 class TestMonitorThreadTimeout:
     """Test monitor thread timeout scenarios."""
 
-    def test_monitor_thread_timeout_warning(self, device_dummy):
+    def test_monitor_thread_timeout_warning(self):
         """Test warning when monitor thread doesn't stop gracefully."""
         from unittest.mock import MagicMock, patch
 
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Enable heartbeat to start thread
         manager.enable_heartbeat(interval=30, threshold=2)
@@ -415,29 +396,11 @@ class TestMonitorThreadTimeout:
 class TestHeartbeatSkipConditions:
     """Test heartbeat skip conditions."""
 
-    def test_should_check_heartbeat_device_not_open(self, device_dummy):
-        """Test that heartbeat is skipped when device is not open."""
-        manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-
-        # Set device as not open
-        device_dummy._open = False
-        manager._heartbeat._heartbeat_enabled = True
-        manager._heartbeat._last_heartbeat_time = (
-            time.time() - 100
-        )  # Past interval
-
-        # Should not check heartbeat when device not open
-        assert not manager._heartbeat._should_check_heartbeat()
-
-    def test_should_check_heartbeat_device_unhealthy(self, device_dummy):
+    def test_should_check_heartbeat_device_unhealthy(self):
         """Test that heartbeat is skipped when device is unhealthy."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
-        # Set device as open and crashed (unhealthy)
-        # This ensures we reach the is_healthy() check (line 492-497)
-        device_dummy._open = True
+        # Set device as crashed (unhealthy)
         manager.set_crashed("test crash")
         manager._heartbeat._heartbeat_enabled = True
         manager._heartbeat._last_heartbeat_time = (
@@ -447,89 +410,39 @@ class TestHeartbeatSkipConditions:
         # Should not check heartbeat when device unhealthy
         assert not manager._heartbeat._should_check_heartbeat()
 
-    def test_should_check_heartbeat_interactive_mode(self, device_dummy):
-        """Test that heartbeat is skipped in interactive mode."""
+    def test_should_check_heartbeat_healthy(self):
+        """Test heartbeat check when interval passed and state is healthy."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-
-        # Set device in interactive mode
-        device_dummy._interactive_mode = True
-        device_dummy._open = True
         manager._heartbeat._heartbeat_enabled = True
         manager._heartbeat._last_heartbeat_time = (
             time.time() - 100
         )  # Past interval
 
-        # Should not check heartbeat in interactive mode
-        assert not manager._heartbeat._should_check_heartbeat()
-
-    def test_should_check_heartbeat_device_no_open_attr(self, device_dummy):
-        """Test heartbeat when device has no _open attribute."""
-        manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-
-        # Remove _open attribute to test hasattr False branch (line 486->492)
-        del device_dummy._open  # Device always has this attribute
-
-        manager._heartbeat._heartbeat_enabled = True
-        manager._heartbeat._last_heartbeat_time = (
-            time.time() - 100
-        )  # Past interval
-
-        # Should still return True if no _open attribute (hasattr False)
+        # Should return True when no skip condition applies
         result = manager._heartbeat._should_check_heartbeat()
         assert result is True
-
-        # Restore attribute for other tests
-        device_dummy._open = True
-
-    def test_should_check_heartbeat_no_interactive_attr(self, device_dummy):
-        """Test heartbeat when device has no _interactive_mode attribute."""
-        manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-
-        # Remove _interactive_mode to test hasattr False branch (line 500->509)
-        del device_dummy._interactive_mode  # Device always has this attribute
-
-        manager._heartbeat._heartbeat_enabled = True
-        manager._heartbeat._last_heartbeat_time = (
-            time.time() - 100
-        )  # Past interval
-        device_dummy._open = True
-
-        # Should return True if no _interactive_mode attribute (hasattr False)
-        result = manager._heartbeat._should_check_heartbeat()
-        assert result is True
-
-        # Restore attribute for other tests
-        device_dummy._interactive_mode = False
 
     def test_monitor_loop_performs_check(self, device_dummy):
         """Test that monitor loop performs heartbeat check."""
         import time
 
-        manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-        device_dummy._open = True
-
-        # Enable with very short interval
-        manager.enable_heartbeat(interval=30, threshold=2)
+        # Enable with send_fn so heartbeat can run
+        device_dummy.enable_heartbeat_monitoring(interval=30, threshold=2)
 
         # Wait for at least one check to occur (tests lines 450-451)
         time.sleep(1.5)
 
         # Verify at least one check was attempted
-        assert manager._heartbeat._last_heartbeat_time > 0
+        assert device_dummy._state_mgr._heartbeat._last_heartbeat_time > 0
 
         # Clean up
-        manager.disable_heartbeat()
+        device_dummy.disable_heartbeat_monitoring()
 
-    def test_monitor_loop_exception_handling(self, device_dummy):
+    def test_monitor_loop_exception_handling(self):
         """Test monitor loop handles exceptions gracefully."""
         import time
 
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Make _should_check_heartbeat raise exception
         def failing_check():
@@ -552,10 +465,9 @@ class TestHeartbeatSkipConditions:
 class TestHeartbeatMonitorCoverage:
     """Additional tests for 100% coverage."""
 
-    def test_get_failure_count(self, device_dummy):
+    def test_get_failure_count(self):
         """Test get_failure_count method."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Initially no failures
         assert manager._heartbeat.get_failure_count() == 0
@@ -564,10 +476,9 @@ class TestHeartbeatMonitorCoverage:
         manager._heartbeat._heartbeat_failures = 2
         assert manager._heartbeat.get_failure_count() == 2
 
-    def test_enable_heartbeat_invalid_interval(self, device_dummy):
+    def test_enable_heartbeat_invalid_interval(self):
         """Test ValueError when interval is less than minimum."""
         manager = DeviceStateManager()
-        manager.set_device(device_dummy)
 
         # Try to enable with interval less than minimum (30s)
         try:
@@ -577,20 +488,16 @@ class TestHeartbeatMonitorCoverage:
             assert "at least 30" in str(e)
             assert "10" in str(e)
 
-    def test_heartbeat_failure_without_state_callback(self, device_dummy):
+    def test_heartbeat_failure_without_state_callback(self):
         """Test heartbeat failure when _set_state callback is None."""
         from ntfc.device.heartbeat import HeartbeatMonitor
 
         monitor = HeartbeatMonitor(on_state_change=None)
         # Don't set state callbacks - _set_state will be None
-        monitor.set_device(device_dummy)
+        send_fn = MagicMock(side_effect=Exception("Test error"))
+        monitor._send_fn = send_fn
         monitor._heartbeat_enabled = True
         monitor._heartbeat_threshold = 2
-
-        # Mock exception to cause failure
-        device_dummy.send_cmd_read_until_pattern = MagicMock(
-            side_effect=Exception("Test error")
-        )
 
         # First failure - should not trigger busyloop yet
         monitor._check_heartbeat()
@@ -605,34 +512,21 @@ class TestHeartbeatMonitorCoverage:
         """Test monitor loop actually executes heartbeat check."""
         import time
 
-        manager = DeviceStateManager()
-        manager.set_device(device_dummy)
-        device_dummy._open = True
-        device_dummy._interactive_mode = False
+        # Enable with callables
+        device_dummy.enable_heartbeat_monitoring(interval=30, threshold=2)
 
         # Set last heartbeat time to past to trigger immediate check
-        manager._heartbeat._last_heartbeat_time = time.time() - 100
-
-        # Enable with very short interval
-        manager.enable_heartbeat(interval=30, threshold=2)
-
-        # Mock send_cmd_read_until_pattern to track calls
-        original_call = device_dummy.send_cmd_read_until_pattern
-        call_count = [0]
-
-        def counting_mock(*args, **kwargs):  # pragma: no cover
-            call_count[0] += 1
-            return original_call(*args, **kwargs)
-
-        device_dummy.send_cmd_read_until_pattern = counting_mock
+        device_dummy._state_mgr._heartbeat._last_heartbeat_time = (
+            time.time() - 100
+        )
+        device_dummy._open = True
 
         # Wait for heartbeat check to occur
         time.sleep(1.5)
 
         # The monitor loop runs in background thread
-        # Heartbeat execution is tested in other tests (lines 231-232)
         # This test verifies thread is running
-        assert manager._heartbeat._monitor_thread is not None
+        assert device_dummy._state_mgr._heartbeat._monitor_thread is not None
 
         # Clean up
-        manager.disable_heartbeat()
+        device_dummy.disable_heartbeat_monitoring()

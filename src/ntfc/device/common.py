@@ -24,10 +24,9 @@ import re
 import subprocess
 import time
 from abc import ABC, abstractmethod
-from dataclasses import astuple, dataclass
-from enum import IntEnum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
+from ntfc.device.cmds import CmdReturn, CmdStatus
 from ntfc.device.state import DeviceState, DeviceStateManager
 from ntfc.log.logger import logger
 
@@ -39,45 +38,7 @@ if TYPE_CHECKING:
 
 _ANSI_ESCAPE_RE = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
-
-###############################################################################
-# Class: CmdStatus
-###############################################################################
-
-
-class CmdStatus(IntEnum):
-    """Command status."""
-
-    SUCCESS = 0
-    NOTFOUND = -1
-    TIMEOUT = -2
-    FAILED = -3
-
-    def __str__(self) -> str:
-        """Return enum string."""
-        return self.name
-
-
-###############################################################################
-# Class: CmdReturn
-###############################################################################
-
-
-@dataclass
-class CmdReturn:
-    """Command return data."""
-
-    status: CmdStatus
-    rematch: "Optional[re.Match[Any]]" = None
-    output: str = ""
-
-    def valid_match(self) -> bool:
-        """Check if RE match is valid."""
-        return bool((self.status == CmdStatus.SUCCESS) and self.rematch)
-
-    def __iter__(self) -> Any:
-        """Make the dataclass instance iterable."""
-        yield from astuple(self)
+__all__ = ["CmdReturn", "CmdStatus", "DeviceCommon"]
 
 
 ###############################################################################
@@ -105,9 +66,8 @@ class DeviceCommon(ABC):
         self._state_mgr = DeviceStateManager(
             busyloop_threshold=float(self._BUSY_LOOP_TIMEOUT),
             crash_signatures=self._dev.crash_signatures,
+            heartbeat_send_fn=self.send_cmd_read_until_pattern,
         )
-        # Set device reference for heartbeat monitoring
-        self._state_mgr.set_device(self)
         self.clear_fault_flags()
 
         self._read_all_sleep = 0.1

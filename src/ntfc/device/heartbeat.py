@@ -24,13 +24,14 @@ import threading
 import time
 from typing import TYPE_CHECKING, Callable, Optional
 
+from ntfc.device.cmds import CmdReturn, CmdStatus
 from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
-    from .common import CmdReturn
     from .state import DeviceState
 
 _StateChangeCallback = Callable[["DeviceState", "DeviceState", str], None]
+_SendFn = Callable[..., CmdReturn]
 
 
 ###############################################################################
@@ -55,11 +56,17 @@ class HeartbeatMonitor:
     def __init__(
         self,
         on_state_change: Optional[_StateChangeCallback] = None,
+        set_busy_loop: Optional[Callable[[str], None]] = None,
+        is_healthy: Optional[Callable[[], bool]] = None,
+        send_fn: Optional[_SendFn] = None,
     ) -> None:
         """Initialize :class:`HeartbeatMonitor`.
 
         :param on_state_change: Optional state-change callback.
             Signature: ``(old, new, reason) -> None``.
+        :param set_busy_loop: Optional callback to transition to busyloop.
+        :param is_healthy: Optional callback returning device health.
+        :param send_fn: Optional callable to send heartbeat commands.
         """
         self._on_state_change = on_state_change
 
@@ -77,33 +84,14 @@ class HeartbeatMonitor:
         self._in_command = (
             False  # Flag to skip heartbeat during command execution
         )
-        self._device: Optional[object] = None  # Device reference for heartbeat
         self._lock = threading.Lock()
 
+        # Callable for sending heartbeat commands
+        self._send_fn: Optional[_SendFn] = send_fn
+
         # Callback for state transitions
-        self._set_state: Optional[Callable[[str], None]] = None
-        self._is_healthy_fn: Optional[Callable[[], bool]] = None
-
-    def set_state_callbacks(
-        self,
-        set_busy_loop: Callable[[str], None],
-        is_healthy: Callable[[], bool],
-    ) -> None:
-        """Register state transition callbacks.
-
-        :param set_busy_loop: Function to call when busyloop is detected.
-        :param is_healthy: Function to check if device is healthy.
-        """
         self._set_state = set_busy_loop
         self._is_healthy_fn = is_healthy
-
-    def set_device(self, device: object) -> None:
-        """Set device reference for heartbeat monitoring.
-
-        :param device: Device object that implements
-            send_cmd_read_until_pattern
-        """
-        self._device = device
 
     def get_failure_count(self) -> int:  # pragma: no cover
         """Return current heartbeat failure count.
@@ -141,7 +129,9 @@ class HeartbeatMonitor:
             self._heartbeat_failures = 0
 
     def enable_heartbeat(
-        self, interval: float = 60, threshold: int = 3
+        self,
+        interval: float = 60,
+        threshold: int = 3,
     ) -> None:
         """Enable heartbeat detection.
 
@@ -242,10 +232,9 @@ class HeartbeatMonitor:
         """Check if heartbeat check should be performed.
 
         Skips heartbeat check when:
-        - Device is not open
-        - Device is in unhealthy state (crashed/busyloop)
-        - Device is in interactive mode
-        - Device is executing another command (locked)
+        - No send function is configured
+        - Device is in unhealthy state
+        - A command is currently being executed
 
         :return: True if check is needed
         """
@@ -259,28 +248,12 @@ class HeartbeatMonitor:
             if elapsed < self._heartbeat_interval:
                 return False
 
-            # Check if device is open
-            if self._device is not None and hasattr(self._device, "_open"):
-                if not self._device._open:
-                    logger.debug("Device not open, skipping heartbeat")
-                    return False
+        # Check if device is in unhealthy state
+        if self._is_healthy_fn is not None and not self._is_healthy_fn():
+            logger.debug("Device in unhealthy state, skipping heartbeat")
+            return False
 
-            # Check if device is in unhealthy state
-            if self._is_healthy_fn is not None and not self._is_healthy_fn():
-                logger.debug("Device in unhealthy state, skipping heartbeat")
-                return False
-
-            # Check if device is in interactive mode
-            if self._device is not None and hasattr(
-                self._device, "_interactive_mode"
-            ):
-                if self._device._interactive_mode:
-                    logger.debug(
-                        "Device in interactive mode, skipping heartbeat"
-                    )
-                    return False
-
-            return True
+        return True
 
     def _check_heartbeat(self) -> bool:
         """Execute heartbeat check (active detection).
@@ -291,8 +264,8 @@ class HeartbeatMonitor:
 
         :return: True if heartbeat is normal, False if failed
         """
-        if self._device is None:
-            logger.warning("Device not set, cannot perform heartbeat check")
+        if self._send_fn is None:
+            logger.warning("Send function not set, cannot perform heartbeat")
             return True
 
         self._last_heartbeat_time = time.time()
@@ -320,10 +293,7 @@ class HeartbeatMonitor:
         logger.debug(f"Sending heartbeat: {cmd!r}")
 
         try:
-            # Import here to avoid circular dependency
-            from .common import CmdStatus  # noqa: F811
-
-            result: "CmdReturn" = self._device.send_cmd_read_until_pattern(  # type: ignore[union-attr]  # noqa: E501
+            result: CmdReturn = self._send_fn(  # type: ignore[misc]
                 cmd, pattern, timeout=self._heartbeat_timeout
             )
 

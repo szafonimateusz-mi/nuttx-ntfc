@@ -34,8 +34,9 @@ class DeviceDummy:  # pragma: no cover
     def __init__(self, _):
         """Initialize dummy device."""
         # Create state manager
-        self._state_mgr = DeviceStateManager()
-        self._state_mgr.set_device(self)
+        self._state_mgr = DeviceStateManager(
+            heartbeat_send_fn=self.send_cmd_read_until_pattern
+        )
 
         # Device state flags
         self._open = False

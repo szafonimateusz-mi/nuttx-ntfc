@@ -26,7 +26,7 @@ import time
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 
-from ntfc.device.heartbeat import HeartbeatMonitor
+from ntfc.device.heartbeat import HeartbeatMonitor, _SendFn
 from ntfc.log.logger import logger
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -99,6 +99,7 @@ class DeviceStateManager:
         busyloop_threshold: float = 180.0,
         on_state_change: Optional[_StateChangeCallback] = None,
         crash_signatures: Optional[Dict[CrashType, List[bytes]]] = None,
+        heartbeat_send_fn: Optional[_SendFn] = None,
     ) -> None:
         """Initialize :class:`DeviceStateManager`.
 
@@ -106,6 +107,7 @@ class DeviceStateManager:
         :param on_state_change: Optional state-change callback.
             Signature: ``(old, new, reason) -> None``.
         :param crash_signatures: Crash pattern map for :meth:`check_crash`.
+        :param heartbeat_send_fn: Optional callable used by heartbeat checks.
         """
         self._busyloop_threshold = busyloop_threshold
         self._on_state_change = on_state_change
@@ -118,19 +120,12 @@ class DeviceStateManager:
         self._crash_type: CrashType = CrashType.UNKNOWN
 
         # Heartbeat monitoring (delegated to HeartbeatMonitor)
-        self._heartbeat = HeartbeatMonitor(on_state_change)
-        self._heartbeat.set_state_callbacks(
+        self._heartbeat = HeartbeatMonitor(
+            on_state_change=on_state_change,
             set_busy_loop=self.set_busy_loop,
             is_healthy=self.is_healthy,
+            send_fn=heartbeat_send_fn,
         )
-
-    def set_device(self, device: object) -> None:
-        """Set device reference for heartbeat monitoring.
-
-        :param device: Device object that implements
-            send_cmd_read_until_pattern
-        """
-        self._heartbeat.set_device(device)
 
     def get_current_state(self) -> DeviceState:
         """Return the current device state (thread-safe).
@@ -374,7 +369,9 @@ class DeviceStateManager:
         return wrapper  # type: ignore[return-value]
 
     def enable_heartbeat(
-        self, interval: float = 60, threshold: int = 3
+        self,
+        interval: float = 60,
+        threshold: int = 3,
     ) -> None:
         """Enable heartbeat detection.
 
