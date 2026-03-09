@@ -37,6 +37,7 @@ from ntfc.log.logger import logger
 
 if TYPE_CHECKING:
     from ntfc.log.handler import LogHandler
+    from ntfc.type_defs import PatternLike
 from ntfc.parallel import run_parallel
 from ntfc.productconfig import ProductConfig
 
@@ -146,7 +147,7 @@ class CoresHandler:
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
         cmd: str,
-        pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
+        pattern: "Optional[PatternLike]" = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
     ) -> "CmdReturn":
@@ -183,11 +184,9 @@ class CoresHandler:
 
     def readUntilPattern(  # noqa: N802
         self,
-        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        pattern: "PatternLike",
         timeout: int = 30,
-        fail_pattern: Optional[
-            Union[str, bytes, List[Union[str, bytes]]]
-        ] = None,
+        fail_pattern: "Optional[PatternLike]" = None,
     ) -> "CmdReturn":
         """Read device output until pattern without sending a command.
 

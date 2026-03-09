@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from ntfc.core import ProductCore
     from ntfc.device.common import CmdReturn, CmdStatus
     from ntfc.log.handler import LogHandler
+    from ntfc.type_defs import PatternLike
 
 
 ###############################################################################
@@ -106,7 +107,7 @@ class Product:
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
         cmd: str,
-        pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
+        pattern: "Optional[PatternLike]" = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
     ) -> "CmdReturn":
@@ -117,11 +118,9 @@ class Product:
 
     def readUntilPattern(  # noqa: N802
         self,
-        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        pattern: "PatternLike",
         timeout: int = 30,
-        fail_pattern: Optional[
-            Union[str, bytes, List[Union[str, bytes]]]
-        ] = None,
+        fail_pattern: "Optional[PatternLike]" = None,
     ) -> "CmdReturn":
         """Call for all cores."""
         return self._cores.readUntilPattern(pattern, timeout, fail_pattern)

@@ -28,6 +28,7 @@ from ntfc.parallel import run_parallel
 
 if TYPE_CHECKING:
     from ntfc.product import Product
+    from ntfc.type_defs import PatternLike
 
 ###############################################################################
 # Class: ProductsHandler
@@ -75,7 +76,7 @@ class ProductsHandler:
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
         cmd: str,
-        pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
+        pattern: "Optional[PatternLike]" = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
     ) -> CmdReturn:
@@ -99,11 +100,9 @@ class ProductsHandler:
 
     def readUntilPattern(  # noqa: N802
         self,
-        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        pattern: "PatternLike",
         timeout: int = 30,
-        fail_pattern: Optional[
-            Union[str, bytes, List[Union[str, bytes]]]
-        ] = None,
+        fail_pattern: "Optional[PatternLike]" = None,
     ) -> CmdReturn:
         """Read device output until pattern on all products in parallel."""
         results = run_parallel(

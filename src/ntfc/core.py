@@ -38,6 +38,7 @@ from ntfc.log.logger import logger
 if TYPE_CHECKING:
     from ntfc.device.common import DeviceCommon
     from ntfc.log.handler import LogHandler
+    from ntfc.type_defs import PatternLike
 
 ###############################################################################
 # Class: ProductCore
@@ -144,7 +145,7 @@ class ProductCore:
         )
 
     def _encode_for_device(
-        self, cmd: str, pattern: Union[str, bytes, List[Union[str, bytes]]]
+        self, cmd: str, pattern: "PatternLike"
     ) -> Tuple[bytes, bytes]:
         """Encode command and pattern to bytes, merging lists if needed."""
         cmd_bytes = cmd.encode("utf-8")
@@ -254,7 +255,7 @@ class ProductCore:
 
     def _encode_fail_pattern(
         self,
-        fail_pattern: Union[str, bytes, List[Union[str, bytes]]],
+        fail_pattern: "PatternLike",
     ) -> bytes:
         """Encode fail_pattern (str/bytes/list) into a single bytes OR-regex.
 
@@ -272,12 +273,10 @@ class ProductCore:
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
         cmd: str,
-        pattern: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
+        pattern: "Optional[PatternLike]" = None,
         args: Optional[Union[str, List[str]]] = None,
         timeout: int = 30,
-        fail_pattern: Optional[
-            Union[str, bytes, List[Union[str, bytes]]]
-        ] = None,
+        fail_pattern: "Optional[PatternLike]" = None,
     ) -> CmdReturn:
         """Send command to device and read until a specific pattern.
 
@@ -315,11 +314,9 @@ class ProductCore:
 
     def readUntilPattern(  # noqa: N802
         self,
-        pattern: Union[str, bytes, List[Union[str, bytes]]],
+        pattern: "PatternLike",
         timeout: int = 30,
-        fail_pattern: Optional[
-            Union[str, bytes, List[Union[str, bytes]]]
-        ] = None,
+        fail_pattern: "Optional[PatternLike]" = None,
     ) -> CmdReturn:
         """Read device output until a pattern without sending a command.
 
