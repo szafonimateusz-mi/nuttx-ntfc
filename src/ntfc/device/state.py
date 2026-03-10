@@ -137,15 +137,15 @@ class DeviceStateManager:
 
     def is_crashed(self) -> bool:
         """Return ``True`` if the device is in the crashed state."""
-        return self._current_state == DeviceState.CRASHED
+        return self.get_current_state() == DeviceState.CRASHED
 
     def is_busy_loop(self) -> bool:
         """Return ``True`` if the device is in the busy loop state."""
-        return self._current_state == DeviceState.BUSY_LOOP
+        return self.get_current_state() == DeviceState.BUSY_LOOP
 
     def is_healthy(self) -> bool:
         """Return ``True`` if the device is in the normal (healthy) state."""
-        return self._current_state == DeviceState.NORMAL
+        return self.get_current_state() == DeviceState.NORMAL
 
     def is_unhealthy(self) -> bool:
         """Return ``True`` if the device is in any fault state.
