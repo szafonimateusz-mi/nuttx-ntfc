@@ -20,7 +20,6 @@
 
 """Cores handler class implementation."""
 
-from concurrent.futures import ThreadPoolExecutor
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -281,27 +280,7 @@ class CoresHandler:
 
     def start_log_collect(self, logs: "Dict[str, LogHandler]") -> None:
         """Start log collection for all cores in parallel."""
-
-        def start_log_for_core(
-            index_core: tuple[int, ProductCore],
-        ) -> tuple[int, None]:
-            """Start log collection for a core.
-
-            :param index_core: Tuple of (index, core)
-            :return: Tuple of (index, None)
-            """
-            index, core = index_core
-            core.start_log_collect(logs[core.name])
-            return (index, None)
-
-        with ThreadPoolExecutor(max_workers=len(self._cores)) as executor:
-            indexed_cores = list(enumerate(self._cores))
-            futures = [
-                executor.submit(start_log_for_core, item)
-                for item in indexed_cores
-            ]
-            for future in futures:
-                future.result()
+        run_parallel(self._cores, lambda c: c.start_log_collect(logs[c.name]))
 
     def stop_log_collect(self) -> None:
         """Stop log collection for all cores in parallel."""
