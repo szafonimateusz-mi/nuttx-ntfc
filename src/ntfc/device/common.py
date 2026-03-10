@@ -21,6 +21,7 @@
 """Device common interface."""
 
 import re
+import shlex
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -386,8 +387,7 @@ class DeviceCommon(ABC):
     def _system_cmd(self, cmd: str) -> None:  # pragma: no cover
         logger.info(f"system command: {cmd}")
         subprocess.run(
-            cmd,
-            shell=True,
+            shlex.split(cmd),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=True,
