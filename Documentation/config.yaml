@@ -23,6 +23,7 @@ product:                          # many products can be supported in tests (pro
 
   name: "product"                 # product name
   platform: "amp"                 # Platform type: "amp" (default) or "smp"
+  ignored_cores: ["dsp"]          # (optional) core names skipped in get_core_info. Defaults to ["dsp"]
                                   # amp: Each core has its own device instance
                                   # smp: All cores share the same device, automatic core switching
   cores:                          # Cores configuration

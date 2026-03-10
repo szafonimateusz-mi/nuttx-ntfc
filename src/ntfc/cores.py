@@ -65,21 +65,26 @@ class CoresHandler:
 
         # For SMP mode, only create one device instance from core0
         # For AMP mode, create separate device instances for each core
+        ignored = conf.ignored_cores
         if conf.is_smp:
             # SMP: Create only core0 device, but track all cores
             dev = get_device(conf.cfg_core(0))
-            self._cores.append(ProductCore(dev, conf.cfg_core(0)))
+            self._cores.append(ProductCore(dev, conf.cfg_core(0), ignored))
 
             # Add logical cores for SMP (without creating new devices)
             # These will be used for core switching via device commands
             for core in range(1, conf.cores_num):
                 # Reuse the same device but with different core config
-                self._cores.append(ProductCore(dev, conf.cfg_core(core)))
+                self._cores.append(
+                    ProductCore(dev, conf.cfg_core(core), ignored)
+                )
         else:
             # AMP: Create separate device for each core
             for core in range(conf.cores_num):
                 dev = get_device(conf.cfg_core(core))
-                self._cores.append(ProductCore(dev, conf.cfg_core(core)))
+                self._cores.append(
+                    ProductCore(dev, conf.cfg_core(core), ignored)
+                )
 
     def init(self) -> None:
         """Initialize all cores."""

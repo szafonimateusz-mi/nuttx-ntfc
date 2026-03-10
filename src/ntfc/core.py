@@ -72,11 +72,18 @@ class CoreStatus(_Enum):
 class ProductCore:
     """This class implements product core under test."""
 
-    def __init__(self, device: "DeviceCommon", conf: "CoreConfig") -> None:
+    def __init__(
+        self,
+        device: "DeviceCommon",
+        conf: "CoreConfig",
+        ignored_cores: Optional[List[str]] = None,
+    ) -> None:
         """Initialize product core under test.
 
         :param device: DeviceCommon instance
-        :param conf: ProductConfig instance
+        :param conf: CoreConfig instance
+        :param ignored_cores: Core names to skip in :meth:`get_core_info`.
+         Defaults to ``["dsp"]``.
         """
         if not device:
             raise TypeError("Device instance is required")
@@ -88,6 +95,9 @@ class ProductCore:
         self._uptime = conf.uptime
         self._name = conf.name
         self._conf = conf
+        self._ignored_cores: List[str] = (
+            list(ignored_cores) if ignored_cores is not None else ["dsp"]
+        )
         self._builder = CommandBuilder(device.prompt, device.no_cmd)
 
         self._prompt = device.prompt
@@ -264,7 +274,6 @@ class ProductCore:
         """
         cmd_rpmsg = b"cat proc/rpmsg"
         timeout = 5
-        nonuttx_core = ["dsp"]  # Non-NuttX core (extend this list as needed)
 
         # Send command and get raw output
         cmdret = self._device.send_cmd_read_until_pattern(
@@ -316,7 +325,11 @@ class ProductCore:
         # Create result tuple (Local CPU + all Remote CPUs)
         return (
             local_cpu,
-            *(cpu[1] for cpu in core_data if cpu[1] not in nonuttx_core),
+            *(
+                cpu[1]
+                for cpu in core_data
+                if cpu[1] not in self._ignored_cores
+            ),
         )
 
     def init(self) -> None:

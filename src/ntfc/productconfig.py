@@ -20,7 +20,7 @@
 
 """Product configuration handler."""
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from ntfc.coreconfig import CoreConfig
 from ntfc.log.logger import logger
@@ -188,3 +188,12 @@ class ProductConfig:
     def is_amp(self) -> bool:
         """Check if platform is AMP."""
         return self._platform == "amp"
+
+    @property
+    def ignored_cores(self) -> List[str]:
+        """Return list of core names to ignore when collecting core info.
+
+        Configurable via ``ignored_cores`` key in the product YAML section.
+        Defaults to ``["dsp"]``.
+        """
+        return list(self._config.get("ignored_cores", ["dsp"]))

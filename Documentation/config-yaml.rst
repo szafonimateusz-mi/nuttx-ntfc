@@ -357,6 +357,9 @@ These fields are parsed by :class:`ntfc.productconfig.ProductConfig`.
        See `Platform Types`_ section
    * - ``cores``
      - List of product cores (core0, core1, etc.)
+   * - ``ignored_cores``
+     - (Optional) List of core names to skip when collecting core topology
+       info via ``get_core_info``. Defaults to ``["dsp"]``
 
 Core Configuration Fields
 =========================
