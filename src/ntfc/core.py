@@ -20,7 +20,6 @@
 
 """Product core class implementation."""
 
-import logging
 import re
 from typing import (
     TYPE_CHECKING,
@@ -512,7 +511,7 @@ class ProductCore:
         """
         # Check if device supports command checking
         if hasattr(self._device, "elf_parser") and self._device.elf_parser:
-            logging.debug(f"Checking command pattern: {cmd_pattern}")
+            logger.debug(f"Checking command pattern: {cmd_pattern}")
 
             # Split by '|' to support alternative patterns
             alternatives = (
@@ -538,7 +537,7 @@ class ProductCore:
             return False
 
         # Fallback: try to execute the command and check if it exists
-        logging.warning(
+        logger.warning(
             "ELF parser not available, trying command check for: "
             f"{cmd_pattern}"
         )
