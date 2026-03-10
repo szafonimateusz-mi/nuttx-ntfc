@@ -512,8 +512,6 @@ class ProductCore:
         """
         # Check if device supports command checking
         if hasattr(self._device, "elf_parser") and self._device.elf_parser:
-            import re
-
             logging.debug(f"Checking command pattern: {cmd_pattern}")
 
             # Split by '|' to support alternative patterns
