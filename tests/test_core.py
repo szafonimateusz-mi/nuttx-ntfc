@@ -53,61 +53,15 @@ def test_core_internals(envconfig_dummy):
 
     with patch("ntfc.device.common.DeviceCommon") as mockdevice:
         dev = mockdevice.return_value
-        dev.send_cmd_read_until_pattern.return_value = CmdReturn(
-            CmdStatus.TIMEOUT
-        )
         dev.no_cmd = "command not found"
 
         p = ProductCore(dev, envconfig_dummy.product[0].cfg_core(0))
-
-        assert p._prepare_command("aaa", None) == "aaa"
-        assert p._prepare_command("aaa", "bbb") == "aaa bbb"
-        assert p._prepare_command("aaa", ["bbb", "ccc"]) == "aaa bbb ccc"
-
-        assert (
-            p._build_expect_pattern(["aaa", "bbb"], False, False)
-            == "(aaa|bbb)"
-        )
-        assert (
-            p._build_expect_pattern(["aaa", "bbb"], True, False)
-            == "(?=.*aaa)(?=.*bbb)"
-        )
-        assert (
-            p._build_expect_pattern(["aaa", "bbb"], True, True)
-            == "(?=.*aaa)(?=.*bbb)"
-        )
-        assert (
-            p._build_expect_pattern(["aaa", "bbb"], False, True) == "(aaa|bbb)"
-        )
-
-        assert p._encode_for_device("aaa", ["bbb", "ccc"]) == (
-            b"aaa",
-            b"bbbccc",
-        )
-        assert p._encode_for_device("aaa", [b"bbb", b"ccc"]) == (
-            b"aaa",
-            b"bbbccc",
-        )
-        assert p._encode_for_device("aaa", "bbb") == (b"aaa", b"bbb")
-        assert p._encode_for_device("aaa", b"bbb") == (b"aaa", b"bbb")
 
         assert p._match_not_found(None) is False
         a = re.match(rb"test", b"nsh>")
         assert p._match_not_found(a) is False
         b = re.match(rb"command not found", b"command not found")
         assert p._match_not_found(b) is True
-
-        # _build_fail_pattern_bytes
-        assert p._build_fail_pattern_bytes("ERROR", False) == b"(?:ERROR)"
-        assert p._build_fail_pattern_bytes("err.+", True) == b"(?:err.+)"
-        assert (
-            p._build_fail_pattern_bytes(["ERR", "PANIC"], False)
-            == b"(?:ERR)|(?:PANIC)"
-        )
-        # literal (regexp=False) escapes special chars
-        assert (
-            p._build_fail_pattern_bytes(r"err\d+", False) == rb"(?:err\\d\+)"
-        )
 
 
 def test_core_send_command(envconfig_dummy):

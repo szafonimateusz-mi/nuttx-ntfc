@@ -31,6 +31,7 @@ from typing import (
     Union,
 )
 
+from ntfc.command_builder import CommandBuilder
 from ntfc.coreconfig import CoreConfig
 from ntfc.device.common import CmdReturn, CmdStatus
 from ntfc.log.logger import logger
@@ -64,6 +65,7 @@ class ProductCore:
         self._uptime = conf.uptime
         self._name = conf.name
         self._conf = conf
+        self._builder = CommandBuilder(device.prompt, device.no_cmd)
 
         self._prompt = device.prompt
         self._main_prompt = self._prompt
@@ -83,91 +85,6 @@ class ProductCore:
         """Get string for object."""
         return f"ProductCore: {self._name}"
 
-    def _prepare_command(
-        self, cmd: str, args: Optional[Union[str, List[str]]]
-    ) -> str:
-        """Ensure command is valid and include arguments."""
-        if not cmd:
-            raise ValueError("Command cannot be empty.")
-        if args:
-            if not isinstance(args, (list, tuple)):
-                args = [args]
-            cmd = f"{cmd} {' '.join(args)}"
-        return cmd
-
-    def _prepare_pattern(
-        self,
-        cmd: str,
-        expects: Optional[Union[str, List[str]]],
-        flag: str,
-        match_all: bool,
-        regexp: bool,
-    ) -> str:
-        """Build a single regex pattern string."""
-        if expects:
-            expects_list = (
-                expects if isinstance(expects, (list, tuple)) else [expects]
-            )
-            pattern = self._build_expect_pattern(
-                expects_list, match_all, regexp
-            )
-        else:
-            pattern = self._default_prompt_pattern(cmd, flag)
-
-        # Add 'command not found' alternative
-        notfound_pattern = re.escape(
-            f"{cmd.split(' ')[0]}: {self._device.no_cmd}"
-        )
-        # Wrap everything and make sure dot matches newlines
-        full_pattern = f"(?s)({pattern}|{notfound_pattern})"
-        return full_pattern
-
-    def _build_expect_pattern(
-        self, expects: List[str], match_all: bool, regexp: bool
-    ) -> str:
-        """Return a single regex string."""
-        items = expects if regexp else [re.escape(e) for e in expects]
-
-        if match_all:
-            # Build stacked lookaheads for AND semantics
-            return "".join(f"(?=.*{item})" for item in items)
-
-        # OR semantics
-        return rf"({'|'.join(items)})"
-
-    def _default_prompt_pattern(self, cmd: str, flag: str = "") -> str:
-        """Return prompt-based fallback pattern (string)."""
-        prompt = flag if flag else self._prompt.decode()
-        return (
-            f"{re.escape(prompt)}(?!.*{cmd})"
-            if cmd not in ["\n"]
-            else re.escape(prompt)
-        )
-
-    def _encode_for_device(
-        self, cmd: str, pattern: "PatternLike"
-    ) -> Tuple[bytes, bytes]:
-        """Encode command and pattern to bytes, merging lists if needed."""
-        cmd_bytes = cmd.encode("utf-8")
-
-        if isinstance(pattern, list):
-            # Combine list into one string pattern (mainly for compatibility)
-            pattern_str = "".join(
-                (
-                    p.decode("utf-8")
-                    if isinstance(p, (bytes, bytearray))
-                    else str(p)
-                )
-                for p in pattern
-            )
-            pattern_bytes = pattern_str.encode("utf-8")
-        elif isinstance(pattern, (bytes, bytearray)):
-            pattern_bytes = bytes(pattern)
-        else:
-            pattern_bytes = str(pattern).encode("utf-8")
-
-        return cmd_bytes, pattern_bytes
-
     def _match_not_found(self, rematch: Optional[re.Match[Any]]) -> bool:
         """Check for 'command not found' message."""
         if not rematch:
@@ -176,24 +93,6 @@ class ProductCore:
         if isinstance(matched, (bytes, bytearray)):
             matched = matched.decode("utf-8", errors="ignore")
         return self._device.no_cmd in matched
-
-    def _build_fail_pattern_bytes(
-        self,
-        fail_pattern: Union[str, List[str]],
-        regexp: bool,
-    ) -> bytes:
-        """Encode fail_pattern strings into a single bytes regex (OR joined).
-
-        :param fail_pattern: One or more patterns indicating failure
-        :param regexp: If False, treat each pattern as a literal string
-        :return: Compiled bytes regex
-        """
-        items = (
-            fail_pattern if isinstance(fail_pattern, list) else [fail_pattern]
-        )
-        if not regexp:
-            items = [re.escape(p) for p in items]
-        return "|".join(f"(?:{p})" for p in items).encode("utf-8")
 
     def sendCommand(  # noqa: N802
         self,
@@ -227,48 +126,26 @@ class ProductCore:
 
         :return: status : command execution status
         """
-        cmd = self._prepare_command(cmd, args)
-        pattern = self._prepare_pattern(cmd, expects, flag, match_all, regexp)
-        cmd_bytes, pattern_bytes = self._encode_for_device(cmd, pattern)
-        fail_pattern_bytes = (
-            self._build_fail_pattern_bytes(fail_pattern, regexp)
-            if fail_pattern
-            else None
+        encoded = self._builder.build(
+            cmd, expects, args, flag, match_all, regexp, fail_pattern
         )
 
         logger.debug(
-            f"Sending command: {cmd}, expecting: "
-            f"{pattern} (timeout={timeout}s)"
+            f"Sending command: {encoded.cmd.decode()}, expecting: "
+            f"{encoded.pattern.decode()} (timeout={timeout}s)"
         )
 
         cmdret = self._device.send_cmd_read_until_pattern(
-            cmd_bytes,
-            pattern=pattern_bytes,
+            encoded.cmd,
+            pattern=encoded.pattern,
             timeout=timeout,
-            fail_pattern=fail_pattern_bytes,
+            fail_pattern=encoded.fail_pattern,
         )
 
         if cmdret.valid_match() and self._match_not_found(cmdret.rematch):
             return CmdStatus.NOTFOUND
 
         return cmdret.status
-
-    def _encode_fail_pattern(
-        self,
-        fail_pattern: "PatternLike",
-    ) -> bytes:
-        """Encode fail_pattern (str/bytes/list) into a single bytes OR-regex.
-
-        :param fail_pattern: One or more regex patterns indicating failure
-        :return: Bytes regex
-        """
-        fp_list: List[Union[str, bytes]] = (
-            fail_pattern if isinstance(fail_pattern, list) else [fail_pattern]
-        )
-        decoded = [
-            p.decode("utf-8") if isinstance(p, bytes) else p for p in fp_list
-        ]
-        return "|".join(f"(?:{p})" for p in decoded).encode("utf-8")
 
     def sendCommandReadUntilPattern(  # noqa: N802
         self,
@@ -293,23 +170,17 @@ class ProductCore:
 
         :return: CmdReturn : command return data
         """
-        cmd = self._prepare_command(cmd, args)
-        pattern = self._default_prompt_pattern(cmd) if not pattern else pattern
-        cmd_bytes, pattern_bytes = self._encode_for_device(cmd, pattern)
-        fail_pattern_bytes = (
-            self._encode_fail_pattern(fail_pattern) if fail_pattern else None
-        )
+        encoded = self._builder.build_raw(cmd, pattern, args, fail_pattern)
 
         logger.debug(
-            f"Sending command: {cmd}, expecting pattern: "
-            f"{pattern.decode() if isinstance(pattern, bytes) else pattern} "
-            f"(timeout={timeout}s)"
+            f"Sending command: {encoded.cmd.decode()}, expecting pattern: "
+            f"{encoded.pattern.decode()} (timeout={timeout}s)"
         )
         return self._device.send_cmd_read_until_pattern(
-            cmd_bytes,
-            pattern=pattern_bytes,
+            encoded.cmd,
+            pattern=encoded.pattern,
             timeout=timeout,
-            fail_pattern=fail_pattern_bytes,
+            fail_pattern=encoded.fail_pattern,
         )
 
     def readUntilPattern(  # noqa: N802
@@ -332,9 +203,11 @@ class ProductCore:
 
         :return: CmdReturn : command return data
         """
-        _, pattern_bytes = self._encode_for_device("", pattern)
+        pattern_bytes = self._builder.encode_pattern(pattern)
         fail_pattern_bytes = (
-            self._encode_fail_pattern(fail_pattern) if fail_pattern else None
+            self._builder.encode_fail_pattern(fail_pattern)
+            if fail_pattern
+            else None
         )
 
         logger.debug(
