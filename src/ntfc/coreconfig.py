@@ -49,20 +49,26 @@ class CoreConfig:
         """Load core configuration."""
         with open(self._config["conf_path"], "r", encoding="utf-8") as f:
             for line in f:
-                # ignore all commented lines
-                if line[0] != "#" and line[0] != "\n":
-                    name = line.split("=")[0]
-                    val = line.split("=")[1]
+                line = line.rstrip("\n")
+                # ignore blank lines and commented lines
+                if not line or line.startswith("#"):
+                    continue
 
-                    # parse option value
-                    if val[0] == "y":
-                        val_parsed: Union[bool, str, int] = True
-                    elif "0x" in val:
-                        val_parsed = int(val[:-1], 16)
-                    else:
-                        val_parsed = val[1:-2]
+                name, sep, val = line.partition("=")
+                if not sep:
+                    # no '=' found — skip malformed line
+                    continue
 
-                    self._kv_values[name] = val_parsed
+                # parse option value
+                val_parsed: Union[bool, str, int]
+                if val.startswith("y"):
+                    val_parsed = True
+                elif "0x" in val:
+                    val_parsed = int(val.rstrip(), 16)
+                else:
+                    val_parsed = val[1:-1]
+
+                self._kv_values[name] = val_parsed
 
     @property
     def uptime(self) -> Any:

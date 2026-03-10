@@ -58,6 +58,18 @@ def test_product_core_config():
     assert p.kv_check("aaa") is False
 
 
+def test_load_core_config_malformed_line(tmp_path):
+    cfg_file = tmp_path / "kv_config"
+    cfg_file.write_text(
+        "# comment\n" "\n" "MALFORMED_NO_EQUALS\n" "CONFIG_SYSTEM_NSH=y\n"
+    )
+    conf = {"name": "dummy", "conf_path": str(cfg_file)}
+    p = CoreConfig(conf)
+    # malformed line is skipped; valid line is loaded
+    assert p.kv_check("CONFIG_SYSTEM_NSH") is True
+    assert p.kv_check("MALFORMED_NO_EQUALS") is False
+
+
 def test_core_config_prompt():
     # Test with explicit prompt in YAML config
     conf = {
