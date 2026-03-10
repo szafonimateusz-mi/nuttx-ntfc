@@ -349,7 +349,7 @@ class MyPytest:
         if reinit:  # pragma: no cover
             self._init_pytest(testpath)
 
-        # start device so that C-framework parsers (cmocka, gtest) can
+        # start device so that test framework parsers (cmocka, gtest) can
         # query the binary for test names during pytest_generate_tests
         self._device_start()
 

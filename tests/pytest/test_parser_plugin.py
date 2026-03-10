@@ -28,30 +28,63 @@ import pytest
 
 from ntfc.parsers.base import TestItem as _Item
 from ntfc.parsers.cmocka import CmockaParser
+from ntfc.parsers.custom import CustomParser, CustomParserConfig
 from ntfc.pytest.parsers import (
     PARSER_FIXTURES,
     ParserPlugin,
+    _build_custom_config,
+    _discover_custom_tests,
     _discover_tests,
+    _make_custom_parser,
     _make_parser,
     _read_parser_marker,
 )
 
+_LIST_PATTERN = r"TEST:\s+(?P<name>\w+)"
+_RESULT_PATTERN = r"(?P<status>PASS|FAIL)\s+(?P<name>\w+)"
 
-def _make_node(binary: Optional[str] = None, flt: Optional[str] = None):
-    """Build a minimal pytest item-like object with optional marker."""
+
+def _make_custom_config(**kwargs) -> CustomParserConfig:
+    defaults = dict(
+        list_pattern=_LIST_PATTERN,
+        result_pattern=_RESULT_PATTERN,
+    )
+    defaults.update(kwargs)
+    return CustomParserConfig(**defaults)
+
+
+def _make_node(
+    binary: Optional[str] = None,
+    flt: Optional[str] = None,
+    custom_cfg: Optional[CustomParserConfig] = None,
+):
+    """Build a minimal pytest item-like object with optional marker.
+
+    Custom config is embedded directly in the ``parser_binary`` marker
+    kwargs, mirroring the real user-facing API.
+    """
     if binary is None:
-        marker = None
+        binary_marker = None
     else:
-        kwargs = {}
+        mk_kwargs: dict = {}
         if flt is not None:
-            kwargs["filter"] = flt
-        marker = SimpleNamespace(
-            args=(binary,) if binary else (),
-            kwargs=kwargs,
+            mk_kwargs["filter"] = flt
+        if custom_cfg is not None:
+            mk_kwargs.update(
+                list_pattern=custom_cfg.list_pattern,
+                result_pattern=custom_cfg.result_pattern,
+                list_args=custom_cfg.list_args,
+                run_args=custom_cfg.run_args,
+                filter_args=custom_cfg.filter_args,
+                success_value=custom_cfg.success_value,
+            )
+        binary_marker = SimpleNamespace(
+            args=(binary,),
+            kwargs=mk_kwargs,
         )
 
     node = MagicMock()
-    node.get_closest_marker.return_value = marker
+    node.get_closest_marker.return_value = binary_marker
     return node
 
 
@@ -72,6 +105,28 @@ def _make_core(device_items=None):
         conf=conf,
         sendCommandReadUntilPattern=lambda *_a, **_kw: cmd_return,
     )
+
+
+def _make_custom_core(device_items=None):
+    """Build a mock ProductCore that returns custom list output."""
+    from ntfc.device.common import CmdReturn, CmdStatus
+
+    items = device_items or []
+    lines = "\n".join(f"TEST: {i.name}" for i in items)
+    cmd_return = CmdReturn(status=CmdStatus.SUCCESS, output=lines)
+    conf = SimpleNamespace(elf_path="")
+    return SimpleNamespace(
+        conf=conf,
+        sendCommandReadUntilPattern=lambda *_a, **_kw: cmd_return,
+    )
+
+
+def _make_metafunc(fixture_names, node=None):
+    """Build a mock Metafunc object."""
+    mf = MagicMock()
+    mf.fixturenames = fixture_names
+    mf.definition = node or _make_node(binary=None)
+    return mf
 
 
 def test_parser_fixtures_contains_expected_keys():
@@ -172,7 +227,6 @@ def test_make_parser_no_param(monkeypatch):
     product_mock = SimpleNamespace(core=lambda _: core)
     monkeypatch.setattr(pytest, "product", product_mock, raising=False)
 
-    # request has no 'param' attribute
     request = SimpleNamespace(node=_make_node(binary="bin"))
 
     parser = _make_parser(CmockaParser, request)
@@ -187,14 +241,6 @@ def test_pytest_configure_registers_marker():
     call_args = config.addinivalue_line.call_args[0]
     assert call_args[0] == "markers"
     assert "parser_binary" in call_args[1]
-
-
-def _make_metafunc(fixture_names, node=None):
-    """Build a mock Metafunc object."""
-    mf = MagicMock()
-    mf.fixturenames = fixture_names
-    mf.definition = node or _make_node(binary=None)
-    return mf
 
 
 def test_generate_tests_no_matching_fixture():
@@ -216,7 +262,6 @@ def test_generate_tests_empty_discovery(monkeypatch):
     node = _make_node(binary="my_bin")
     mf = _make_metafunc(["cmocka_parser"], node=node)
 
-    # device returns no tests
     core = _make_core(device_items=[])
     product_mock = SimpleNamespace(core=lambda _: core)
     monkeypatch.setattr(pytest, "product", product_mock, raising=False)
@@ -238,9 +283,7 @@ def test_generate_tests_parametrizes(monkeypatch):
     plugin.pytest_generate_tests(mf)
     mf.parametrize.assert_called_once()
     call_kwargs = mf.parametrize.call_args
-    # First positional arg: fixture name
     assert call_kwargs[0][0] == "cmocka_parser"
-    # Second positional arg: list of test names
     assert call_kwargs[0][1] == ["test_a", "test_b"]
     assert call_kwargs[1]["indirect"] is True
 
@@ -257,4 +300,170 @@ def test_cmocka_parser_fixture(monkeypatch):
     )
     parser = plugin.cmocka_parser.__wrapped__(plugin, request)
     assert isinstance(parser, CmockaParser)
+    assert parser.test_name == "test_foo"
+
+
+def test_build_custom_config_no_marker():
+    node = _make_node(binary=None)
+    assert _build_custom_config(node) is None
+
+
+def test_build_custom_config_no_cfg_kwargs():
+    """parser_binary present but no custom config kwargs → None."""
+    node = _make_node(binary="bin")
+    assert _build_custom_config(node) is None
+
+
+def test_build_custom_config_returns_config():
+    cfg_in = _make_custom_config()
+    node = _make_node(binary="bin", custom_cfg=cfg_in)
+    cfg_out = _build_custom_config(node)
+    assert isinstance(cfg_out, CustomParserConfig)
+    assert cfg_out.list_pattern == _LIST_PATTERN
+    assert cfg_out.result_pattern == _RESULT_PATTERN
+
+
+def test_discover_custom_tests_no_product(monkeypatch):
+    monkeypatch.delattr(pytest, "product", raising=False)
+    cfg = _make_custom_config()
+    result = _discover_custom_tests("bin", None, cfg)
+    assert result == []
+
+
+def test_discover_custom_tests_returns_items(monkeypatch):
+    items = [_Item(name="test_a"), _Item(name="test_b")]
+    core = _make_custom_core(device_items=items)
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    cfg = _make_custom_config()
+    result = _discover_custom_tests("bin", None, cfg)
+    assert len(result) == 2
+    assert result[0].name == "test_a"
+
+
+def test_discover_custom_tests_with_filter(monkeypatch):
+    items = [_Item(name="test_a"), _Item(name="other")]
+    core = _make_custom_core(device_items=items)
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    cfg = _make_custom_config()
+    result = _discover_custom_tests("bin", "test_*", cfg)
+    assert len(result) == 1
+    assert result[0].name == "test_a"
+
+
+def test_make_custom_parser_success(monkeypatch):
+    core = _make_custom_core()
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    cfg = _make_custom_config()
+    request = SimpleNamespace(
+        param="test_foo",
+        node=_make_node(binary="bin", custom_cfg=cfg),
+    )
+    parser = _make_custom_parser(request)
+    assert isinstance(parser, CustomParser)
+    assert parser.test_name == "test_foo"
+
+
+def test_make_custom_parser_no_binary_skips():
+    cfg = _make_custom_config()
+    request = SimpleNamespace(
+        param=None,
+        node=_make_node(binary=None, custom_cfg=cfg),
+    )
+    with pytest.raises(pytest.skip.Exception):
+        _make_custom_parser(request)
+
+
+def test_make_custom_parser_no_cfg_kwargs_skips(monkeypatch):
+    """parser_binary present but no custom config kwargs → skip."""
+    core = _make_custom_core()
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    request = SimpleNamespace(
+        param=None,
+        node=_make_node(binary="bin"),
+    )
+    with pytest.raises(pytest.skip.Exception):
+        _make_custom_parser(request)
+
+
+def test_make_custom_parser_no_param(monkeypatch):
+    core = _make_custom_core()
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    cfg = _make_custom_config()
+    request = SimpleNamespace(node=_make_node(binary="bin", custom_cfg=cfg))
+    parser = _make_custom_parser(request)
+    assert parser.test_name is None
+
+
+def test_generate_tests_custom_no_marker():
+    plugin = ParserPlugin()
+    mf = _make_metafunc(["custom_parser"], node=_make_node(binary=None))
+    plugin.pytest_generate_tests(mf)
+    mf.parametrize.assert_not_called()
+
+
+def test_generate_tests_custom_no_cfg_kwargs():
+    """parser_binary present but no custom config kwargs → no parametrize."""
+    plugin = ParserPlugin()
+    node = _make_node(binary="my_bin")
+    mf = _make_metafunc(["custom_parser"], node=node)
+    plugin.pytest_generate_tests(mf)
+    mf.parametrize.assert_not_called()
+
+
+def test_generate_tests_custom_empty_discovery(monkeypatch):
+    plugin = ParserPlugin()
+    cfg = _make_custom_config()
+    node = _make_node(binary="my_bin", custom_cfg=cfg)
+    mf = _make_metafunc(["custom_parser"], node=node)
+
+    core = _make_custom_core(device_items=[])
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    plugin.pytest_generate_tests(mf)
+    mf.parametrize.assert_not_called()
+
+
+def test_generate_tests_custom_parametrizes(monkeypatch):
+    plugin = ParserPlugin()
+    cfg = _make_custom_config()
+    node = _make_node(binary="my_bin", custom_cfg=cfg)
+    mf = _make_metafunc(["custom_parser"], node=node)
+
+    items = [_Item(name="test_a"), _Item(name="test_b")]
+    core = _make_custom_core(device_items=items)
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    plugin.pytest_generate_tests(mf)
+    mf.parametrize.assert_called_once()
+    call_kwargs = mf.parametrize.call_args
+    assert call_kwargs[0][0] == "custom_parser"
+    assert call_kwargs[0][1] == ["test_a", "test_b"]
+    assert call_kwargs[1]["indirect"] is True
+
+
+def test_custom_parser_fixture(monkeypatch):
+    plugin = ParserPlugin()
+    core = _make_custom_core()
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+
+    cfg = _make_custom_config()
+    request = SimpleNamespace(
+        param="test_foo",
+        node=_make_node(binary="bin", custom_cfg=cfg),
+    )
+    parser = plugin.custom_parser.__wrapped__(plugin, request)
+    assert isinstance(parser, CustomParser)
     assert parser.test_name == "test_foo"

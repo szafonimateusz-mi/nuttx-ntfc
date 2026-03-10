@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-"""Abstract test parser base classes for C framework integration."""
+"""Abstract test parser base classes for test framework integration."""
 
 import fnmatch
 from abc import ABC, abstractmethod
@@ -69,10 +69,10 @@ class TestResult:
 
 
 class AbstractTestParser(ABC):
-    """Abstract base class for C test framework parsers.
+    """Abstract base class for test framework parsers.
 
     Subclasses implement framework-specific discovery and execution
-    logic (e.g. cmocka).
+    logic (e.g. cmocka, custom regex-based).
     """
 
     def __init__(

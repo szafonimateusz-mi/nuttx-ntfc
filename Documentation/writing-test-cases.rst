@@ -283,8 +283,8 @@ Available Marks:
      - Skip test conditionally
      - ``@pytest.mark.skip(reason="not ready")``
    * - ``@pytest.mark.parser_binary()``
-     - Discover and run C framework tests (cmocka) as pytest items
-     - ``@pytest.mark.parser_binary("my_bin", filter="test_*")``
+     - Discover and run test framework tests (cmocka / custom) as pytest items
+     - ``@pytest.mark.parser_binary("bin", list_pattern=..., result_pattern=...)``
 
 Example - Test Repetition:
 
@@ -296,129 +296,19 @@ Example - Test Repetition:
        ret = pytest.product.sendCommand("test", ["PASS"], timeout=15)
        assert ret == 0
 
-C Framework Parsers (cmocka)
-============================
+Test Framework Parsers
+======================
 
-NTFC provides built-in parsers for C test frameworks running directly on the
-NuttX device. Each C-level test case is automatically discovered and mapped
-to an individual parametrized pytest item, so pass/fail status is reported
-per test, not per binary.
+.. toctree::
+   :hidden:
 
-Supported Frameworks
----------------------
+   parsers
 
-.. list-table::
-   :header-rows: 1
-
-   * - Fixture
-     - Framework
-     - Discovery command
-     - Run-single command
-   * - ``cmocka_parser``
-     - `cmocka <https://cmocka.org/>`_
-     - ``<binary> --list``
-     - ``<binary> --test <name>``
-
-Basic Usage
------------
-
-Add the ``@pytest.mark.parser_binary`` marker and request the corresponding
-fixture. The marker takes the **NuttX shell command name** of the binary under
-test — the same name you would type at the ``nsh>`` prompt to run it (e.g.
-``cmocka_audio``). NTFC discovers all C tests at collection time and
-parametrizes the Python test function automatically — one pytest item per C
-test case.
-
-.. code-block:: python
-
-   import pytest
-
-   # "cmocka_bin" is the NuttX shell command that runs the cmocka binary,
-   # e.g. the name registered in the NuttX application Makefile (PROGNAME).
-   @pytest.mark.parser_binary("cmocka_bin")
-   def test_cmocka_suite(cmocka_parser):
-       result = cmocka_parser.run_single()
-
-Pytest output for a binary with three C tests:
-
-.. code-block:: text
-
-   PASSED  test_cmocka_suite[test_foo]
-   FAILED  test_cmocka_suite[test_bar]
-   PASSED  test_cmocka_suite[test_baz]
-
-Filtered Discovery
-------------------
-
-Pass an optional ``filter`` argument to ``parser_binary`` to run only the
-C tests whose names match the shell-style wildcard pattern.
-
-.. code-block:: python
-
-   @pytest.mark.parser_binary("cmocka_bin", filter="test_audio_*")
-   def test_audio_only(cmocka_parser):
-       result = cmocka_parser.run_single()
-       assert result.passed, result.output
-
-The filter is applied by NTFC using :func:`fnmatch.fnmatch` against the
-discovered test names before parametrization.
-
-``TestResult`` Object
----------------------
-
-:meth:`~ntfc.parsers.base.AbstractTestParser.run_single` returns a
-:class:`~ntfc.parsers.base.TestResult` dataclass:
-
-.. list-table::
-   :header-rows: 1
-
-   * - Field
-     - Type
-     - Description
-   * - ``name``
-     - ``str``
-     - Full test name (e.g. ``test_foo``)
-   * - ``passed``
-     - ``bool``
-     - ``True`` if the test passed
-   * - ``output``
-     - ``str``
-     - Raw device output from the test run
-   * - ``duration``
-     - ``Optional[float]``
-     - Elapsed seconds (if reported by the framework)
-
-Discovery Mechanism
--------------------
-
-NTFC tries to resolve test names at collection time in two stages:
-
-1. **ELF symbol scan** — if ``elf_path`` is configured and a valid ELF file
-   is found, :class:`~ntfc.lib.elf.elf_parser.ElfParser` is used.  ``cmocka``
-   currently returns an empty list here (symbols are not reliably named), so
-   the fallback below is always used.
-
-2. **Device discovery** — the binary is run on the target with the
-   framework's list command (``--list``).  The output is parsed into a list of
-   test names.
-
-Running All or Filtered Tests Programmatically
-----------------------------------------------
-
-The parser objects expose additional methods for advanced use cases:
-
-.. code-block:: python
-
-   @pytest.mark.parser_binary("cmocka_bin")
-   def test_run_all(cmocka_parser):
-       results = cmocka_parser.run_all()   # Dict[str, TestResult]
-
-   @pytest.mark.parser_binary("cmocka_bin")
-   def test_run_filtered(cmocka_parser):
-       results = cmocka_parser.run_filtered("test_audio_*")
+NTFC provides built-in parsers for test frameworks (cmocka, custom).
+See :doc:`parsers` for the full reference.
 
 Interaction with Products and Cores
-=====================================
+===================================
 
 NTFC provides several ways to interact with the devices under test (DUTs).
 Depending on the test scenario, you might want to send commands to all devices
