@@ -62,9 +62,9 @@ class DeviceDummy:  # pragma: no cover
         return "dummy"
 
     @property
-    def prompt(self) -> str:
+    def prompt(self) -> bytes:
         """Return target device prompt."""
-        return "NSH> "
+        return b"NSH> "
 
     @property
     def no_cmd(self) -> str:

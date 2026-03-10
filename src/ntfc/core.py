@@ -68,11 +68,7 @@ class ProductCore:
 
         self._prompt = device.prompt
         self._main_prompt = self._prompt
-        self._cur_prompt = (
-            self._main_prompt
-            if isinstance(self._main_prompt, str)
-            else self._main_prompt.decode("utf-8", errors="ignore")
-        )
+        self._cur_prompt = self._main_prompt.decode("utf-8", errors="ignore")
 
         # cores info not ready yet, done in self.init() method called when
         # device is ready
