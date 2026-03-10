@@ -105,6 +105,28 @@ it may change), but it's available from tox:
 tox -e pylint
 ```
 
+### RST Documentation Headers
+
+Use the following header hierarchy in all `.rst` files:
+
+```rst
+==========
+Page Title
+==========
+
+Section
+=======
+
+Subsection
+----------
+
+Sub-subsection
+~~~~~~~~~~~~~~
+```
+
+The page title uses both overline and underline. All underlines must be at
+least as long as the title text.
+
 ### CI
 
 Please run `tox` before submitting a patch to be sure your changes will pass CI.
