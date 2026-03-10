@@ -305,10 +305,10 @@ class DeviceCommon(ABC):
         :return: CmdReturn : command return data
         """
         if not isinstance(cmd, bytes):
-            raise TypeError("Command must by bytes")
+            raise TypeError("Command must be bytes")
 
         if not isinstance(pattern, bytes):
-            raise TypeError("Pattern must by bytes")
+            raise TypeError("Pattern must be bytes")
 
         self._log_console_input(cmd)
 
