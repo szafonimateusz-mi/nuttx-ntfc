@@ -21,6 +21,8 @@
 """Product core class implementation."""
 
 import re
+from enum import Enum as _Enum
+from enum import auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -39,6 +41,28 @@ if TYPE_CHECKING:
     from ntfc.device.common import DeviceCommon
     from ntfc.log.handler import LogHandler
     from ntfc.type_defs import PatternLike
+
+###############################################################################
+# Enum: CoreStatus
+###############################################################################
+
+
+class CoreStatus(_Enum):
+    """Core health status returned by :attr:`ProductCore.status`.
+
+    :cvar NORMAL: Core is operating normally.
+    :cvar CRASH: Core has crashed.
+    :cvar BUSYLOOP: Core is stuck in a busy loop.
+    :cvar FLOOD: Core is flooding output (stuck command).
+    :cvar NOTALIVE: Core process/device is no longer alive.
+    """
+
+    NORMAL = auto()
+    CRASH = auto()
+    BUSYLOOP = auto()
+    FLOOD = auto()
+    NOTALIVE = auto()
+
 
 ###############################################################################
 # Class: ProductCore
@@ -439,21 +463,24 @@ class ProductCore:
         return self._device.notalive
 
     @property
-    def status(self) -> str:
+    def status(self) -> CoreStatus:
         """Check core status with all failure mode detection.
 
-        :return: "CRASH", "BUSYLOOP", "NORMAL", "NOTALIVE"
+        :return: :class:`CoreStatus` representing the current state.
         """
         if self.crash:
-            return "CRASH"
+            return CoreStatus.CRASH
 
         if self.busyloop:
-            return "BUSYLOOP"
+            return CoreStatus.BUSYLOOP
+
+        if self.flood:
+            return CoreStatus.FLOOD
 
         if self.notalive:
-            return "NOTALIVE"
+            return CoreStatus.NOTALIVE
 
-        return "NORMAL"
+        return CoreStatus.NORMAL
 
     @property
     def device(self) -> "DeviceCommon":

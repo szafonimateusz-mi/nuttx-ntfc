@@ -23,7 +23,7 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
-from ntfc.core import ProductCore
+from ntfc.core import CoreStatus, ProductCore
 from ntfc.device.common import CmdReturn, CmdStatus
 
 
@@ -358,23 +358,33 @@ def test_core_status_checker(envconfig_dummy):
 
         dev.busyloop = False
         dev.crash = False
+        dev.flood = False
         dev.notalive = False
-        assert p.status == "NORMAL"
+        assert p.status == CoreStatus.NORMAL
 
         dev.busyloop = True
         dev.crash = False
+        dev.flood = False
         dev.notalive = False
-        assert p.status == "BUSYLOOP"
+        assert p.status == CoreStatus.BUSYLOOP
 
         dev.busyloop = False
         dev.crash = True
+        dev.flood = False
         dev.notalive = False
-        assert p.status == "CRASH"
+        assert p.status == CoreStatus.CRASH
 
         dev.busyloop = False
         dev.crash = False
+        dev.flood = True
+        dev.notalive = False
+        assert p.status == CoreStatus.FLOOD
+
+        dev.busyloop = False
+        dev.crash = False
+        dev.flood = False
         dev.notalive = True
-        assert p.status == "NOTALIVE"
+        assert p.status == CoreStatus.NOTALIVE
 
 
 def test_core_get_core_info(envconfig_dummy):
