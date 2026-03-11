@@ -47,6 +47,9 @@ _CUSTOM_CFG_KEYS = frozenset(
     }
 )
 
+# Cache for discovered test items: keyed by (parser_cls_name, binary, filter)
+_discover_cache: Dict[Tuple[str, str, Optional[str]], "List[TestItem]"] = {}
+
 
 ###############################################################################
 # Helpers — standard parsers
@@ -77,21 +80,26 @@ def _discover_tests(
 ) -> "List[TestItem]":
     """Discover tests for *binary* using *parser_cls*.
 
-    Uses the ``pytest.product`` global set by NTFC before the test
-    session starts.  Returns an empty list when ``pytest.product`` is
-    not available.
+    Results are cached so that the same binary is not queried twice
+    within one pytest session.
 
     :param parser_cls: Parser class to instantiate.
     :param binary: Binary name to query.
     :param native_filter: Optional fnmatch filter to apply.
     :return: List of TestItem objects.
     """
+    cache_key = (parser_cls.__name__, binary, native_filter)
+    if cache_key in _discover_cache:
+        return _discover_cache[cache_key]
+
     product = getattr(pytest, "product", None)
     if product is None:
         return []
     core = product.core(0)
     temp_parser = parser_cls(core, binary)
-    return temp_parser.get_tests(filter=native_filter)
+    items = temp_parser.get_tests(filter=native_filter)
+    _discover_cache[cache_key] = items
+    return items
 
 
 def _make_parser(
@@ -204,6 +212,8 @@ class ParserPlugin:
 
         :param config: Pytest config object.
         """
+        _discover_cache.clear()
+
         config.addinivalue_line(
             "markers",
             "parser_binary(name, filter=None, **custom_cfg): "

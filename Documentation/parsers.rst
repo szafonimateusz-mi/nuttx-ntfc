@@ -21,6 +21,10 @@ Supported Frameworks
      - `cmocka <https://cmocka.org/>`_
      - ``<binary> --list``
      - ``<binary> --test <name>``
+   * - ``gtest_parser``
+     - `Google Test <https://google.github.io/googletest/>`_
+     - ``<binary> --gtest_list_tests``
+     - ``<binary> --gtest_filter=<name>``
    * - ``custom_parser``
      - Any framework (user-defined)
      - Configurable via ``list_args``
@@ -122,6 +126,71 @@ Running All or Filtered Tests Programmatically
    @pytest.mark.parser_binary("cmocka_bin")
    def test_run_filtered(cmocka_parser):
        results = cmocka_parser.run_filtered("test_audio_*")
+
+gtest Parser
+============
+
+The ``gtest_parser`` fixture supports the
+`Google Test <https://google.github.io/googletest/>`_ framework.  Test cases
+are discovered by running ``<binary> --gtest_list_tests`` on the target and
+executed with ``<binary> --gtest_filter=<Suite.TestName>``.
+
+Because gtest registers tests at runtime (not via ELF symbols), discovery
+always uses the device command.  All tests for a given binary are run in a
+single invocation and results are cached; each parametrized pytest item reads
+its outcome from the cache without issuing a second device command.
+
+Basic Usage
+-----------
+
+Add ``@pytest.mark.parser_binary`` and request the ``gtest_parser`` fixture.
+The marker takes the **NuttX shell command name** of the binary.  NTFC
+discovers all test cases at collection time and parametrizes the Python test
+function automatically.  Test names use the ``Suite.TestName`` format produced
+by gtest.
+
+.. code-block:: python
+
+   import pytest
+
+   @pytest.mark.parser_binary("gtest_bin")
+   def test_gtest_suite(gtest_parser):
+       result = gtest_parser.run_single()
+       assert result.passed, result.output
+
+Pytest output for a binary with three tests:
+
+.. code-block:: text
+
+   PASSED  test_gtest_suite[MathTest.AddTwoNumbers]
+   FAILED  test_gtest_suite[MathTest.DivByZero]
+   PASSED  test_gtest_suite[StringTest.EmptyString]
+
+Filtered Discovery
+------------------
+
+Pass an optional ``filter`` kwarg to limit discovered tests to names matching
+a shell-style wildcard pattern (applied via :func:`fnmatch.fnmatch`):
+
+.. code-block:: python
+
+   @pytest.mark.parser_binary("gtest_bin", filter="MathTest.*")
+   def test_math_only(gtest_parser):
+       result = gtest_parser.run_single()
+       assert result.passed, result.output
+
+Running All or Filtered Tests Programmatically
+----------------------------------------------
+
+.. code-block:: python
+
+   @pytest.mark.parser_binary("gtest_bin")
+   def test_run_all(gtest_parser):
+       results = gtest_parser.run_all()   # Dict[str, TestResult]
+
+   @pytest.mark.parser_binary("gtest_bin")
+   def test_run_filtered(gtest_parser):
+       results = gtest_parser.run_filtered("MathTest.*")
 
 Custom Parser
 =============

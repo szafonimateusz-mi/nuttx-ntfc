@@ -156,6 +156,22 @@ def test_runner_run_exitcode(config_dummy, device_dummy):
         assert p.runner(path, {}) == 1
 
 
+def test_runner_run_device_starts_when_not_alive(
+    config_dummy, device_dummy, monkeypatch
+):
+    """_device_start calls product.start/init when device is not yet alive."""
+    with patch("ntfc.cores.get_device", return_value=device_dummy):
+        # notalive=True before start(), False afterwards (tied to _open flag)
+        monkeypatch.setattr(
+            type(device_dummy),
+            "notalive",
+            property(lambda self: not self._open),
+        )
+        p = MyPytest(config_dummy)
+        path = "./tests/resources/tests_exitcode/test_success.py"
+        assert p.runner(path, {}) == 0
+
+
 def test_write_session_config_file(config_dummy, tmp_path):
     p = MyPytest(config_dummy)
 

@@ -33,6 +33,7 @@ from ntfc.pytest.parsers import (
     PARSER_FIXTURES,
     ParserPlugin,
     _build_custom_config,
+    _discover_cache,
     _discover_custom_tests,
     _discover_tests,
     _make_custom_parser,
@@ -42,6 +43,13 @@ from ntfc.pytest.parsers import (
 
 _LIST_PATTERN = r"TEST:\s+(?P<name>\w+)"
 _RESULT_PATTERN = r"(?P<status>PASS|FAIL)\s+(?P<name>\w+)"
+
+
+@pytest.fixture(autouse=True)
+def _clear_caches():
+    _discover_cache.clear()
+    yield
+    _discover_cache.clear()
 
 
 def _make_custom_config(**kwargs) -> CustomParserConfig:
@@ -193,6 +201,17 @@ def test_discover_tests_with_filter(monkeypatch):
     result = _discover_tests(CmockaParser, "bin", "test_*")
     assert len(result) == 1
     assert result[0].name == "test_a"
+
+
+def test_discover_tests_cache_hit(monkeypatch):
+    """Second call with the same key returns the cached list."""
+    core = _make_core(device_items=[_Item(name="test_a")])
+    product_mock = SimpleNamespace(core=lambda _: core)
+    monkeypatch.setattr(pytest, "product", product_mock, raising=False)
+    result1 = _discover_tests(CmockaParser, "cache_hit_bin", None)
+    result2 = _discover_tests(CmockaParser, "cache_hit_bin", None)
+    assert result1 is result2
+    assert len(result2) == 1
 
 
 def test_make_parser_returns_parser(monkeypatch):

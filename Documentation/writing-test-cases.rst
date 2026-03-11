@@ -304,7 +304,7 @@ Test Framework Parsers
 
    parsers
 
-NTFC provides built-in parsers for test frameworks (cmocka, custom).
+NTFC provides built-in parsers for test frameworks (cmocka, gtest, custom).
 See :doc:`parsers` for the full reference.
 
 Interaction with Products and Cores

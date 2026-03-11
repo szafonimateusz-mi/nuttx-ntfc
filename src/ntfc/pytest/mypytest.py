@@ -39,6 +39,7 @@ from ntfc.products import ProductsHandler
 from .collected import Collected
 from .collector import CollectorPlugin
 from .configure import PytestConfigPlugin
+from .gtest_plugin import GtestParserPlugin
 from .parsers import ParserPlugin
 from .runner import RunnerPlugin
 from .signal_plugin import SignalPlugin
@@ -112,6 +113,7 @@ class MyPytest:
         self._plugins.append(self._ptconfig)
         self._plugins.append(SignalPlugin())
         self._plugins.append(ParserPlugin())
+        self._plugins.append(GtestParserPlugin())
 
     def _write_session_config(self, result_dir: str) -> None:
         """Write resolved session configuration into result directory."""
@@ -245,6 +247,13 @@ class MyPytest:
     def _device_start(self) -> None:
         """Start device to test."""
         for product in pytest.products:
+            if not product.core(0).device.notalive:
+                logger.info(
+                    "device %s already alive, skip start",
+                    product.name,
+                )
+                continue
+
             # start device
             product.start()
             # finish product initialization

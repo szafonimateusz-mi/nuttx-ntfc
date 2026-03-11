@@ -72,7 +72,7 @@ class AbstractTestParser(ABC):
     """Abstract base class for test framework parsers.
 
     Subclasses implement framework-specific discovery and execution
-    logic (e.g. cmocka, custom regex-based).
+    logic (e.g. cmocka, gtest, custom regex-based).
     """
 
     def __init__(
