@@ -290,6 +290,7 @@ class MyPytest:
         result: Dict[str, Any],
         nologs: bool = False,
         selected_tests: Optional[List[str]] = None,
+        reinit: bool = True,
     ) -> Any:
         """Run tests.
 
@@ -300,7 +301,8 @@ class MyPytest:
         :param reinit: re-initialize pytest environment (default: True)
         """
         # initialize pytest env
-        self._init_pytest(testpath)
+        if reinit:
+            self._init_pytest(testpath)
 
         opt = []
 

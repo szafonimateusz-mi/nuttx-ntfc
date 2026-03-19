@@ -194,6 +194,7 @@ def tests_run(pt: "MyPytest", ctx: Any) -> Any:
         ctx.result,
         ctx.nologs,
         selected_tests=selected_nodeids,
+        reinit=False,
     )
 
 
