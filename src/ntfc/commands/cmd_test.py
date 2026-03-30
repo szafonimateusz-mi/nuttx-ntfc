@@ -109,6 +109,13 @@ HAS_PYTEST_JSON = importlib.util.find_spec("pytest_json") is not None
     default=None,
     help="Path to log configuration file. Default: log.yaml",
 )
+@click.option(
+    "--manifest",
+    type=click.Path(resolve_path=True, exists=True),
+    default=None,
+    help="Path to multi-session manifest YAML file. "
+    "Mutually exclusive with --confpath/--testpath.",
+)
 def cmd_test(
     ctx: Environment,
     /,  # noqa: ARG001
@@ -125,9 +132,18 @@ def cmd_test(
     list_tests: bool,
     list_modules: bool,
     collect_only: bool,
+    manifest: str,
     **kwargs: Any,
 ) -> bool:
     """Run tests."""
+    if manifest:
+        ctx.runmulti = True
+        ctx.manifest = manifest
+        ctx.rebuild = rebuild
+        ctx.result = {}
+        ctx.result["logcfg"] = kwargs.get("logcfg")
+        return True
+
     ctx.runtest = True
     ctx.testpath = testpath
     ctx.confpath = confpath

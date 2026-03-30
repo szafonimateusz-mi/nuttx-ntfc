@@ -445,6 +445,11 @@ class DeviceCommon(ABC):
         self._log_device_event("start")
         self._start_impl()
 
+    def stop(self) -> None:
+        """Stop the device and release resources."""
+        self._log_device_event("stop")
+        self._stop_impl()
+
     @property
     @abstractmethod
     def name(self) -> str:
@@ -493,6 +498,10 @@ class DeviceCommon(ABC):
     @abstractmethod
     def _start_impl(self) -> None:
         """Start device implementation."""
+
+    @abstractmethod
+    def _stop_impl(self) -> None:
+        """Stop the device and release resources."""
 
     @abstractmethod
     def _poweroff_impl(self) -> bool:

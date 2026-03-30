@@ -34,6 +34,7 @@ from prettytable import PrettyTable
 from ntfc.builder import NuttXBuilder
 from ntfc.cli.environment import Environment, pass_environment
 from ntfc.log.logger import logger
+from ntfc.multi import ManifestConfig, MultiSessionRunner
 from ntfc.plugins_loader import commands_list
 from ntfc.pytest.formatters import list_modules_run, list_tests_run
 from ntfc.pytest.mypytest import MyPytest
@@ -295,11 +296,37 @@ def load_config_files(  # noqa: C901
     return conf, conf_json
 
 
+def multi_run(ctx: Environment) -> int:
+    """Run multi-session pipeline from manifest.
+
+    :param ctx: CLI environment with manifest path.
+    :return: Exit code (0 = success).
+    """
+    assert ctx.manifest is not None
+    manifest = ManifestConfig.load(ctx.manifest)
+    logcfg = ctx.result.get("logcfg") if ctx.result else None
+    runner = MultiSessionRunner(
+        manifest,
+        rebuild=ctx.rebuild,
+        verbose=ctx.verbose,
+        debug=ctx.debug,
+        logcfg=logcfg,
+    )
+    return runner.run()
+
+
 @pass_environment
 def cli_on_close(ctx: Environment) -> bool:
     """Handle all work on Click close."""
     if ctx.helpnow:  # pragma: no cover
         # do nothing if help was called
+        return True
+
+    # multi-session mode
+    if ctx.runmulti:
+        ret = multi_run(ctx)
+        if ret != 0:
+            exit(1)
         return True
 
     # load configuration

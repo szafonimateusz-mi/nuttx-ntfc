@@ -74,6 +74,9 @@ def test_device_sim_internals(serial_config, serial_pair):
     assert ser.name == "serial"
     assert ser.notalive is True
 
+    # stop on non-started device is a no-op
+    ser.stop()
+
     with pytest.raises(ValueError):
         _ = ser._decode_exec_args("aaaa")
 

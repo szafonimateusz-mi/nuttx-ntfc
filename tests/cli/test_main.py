@@ -25,13 +25,16 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ntfc.cli.main import load_config_files, update_nested_dict
+from ntfc.cli.main import (
+    load_config_files,
+    update_nested_dict,
+)
 
 
 class MockEnvironment:
     """Mock Click environment for testing."""
 
-    def __init__(self, confpath: str):
+    def __init__(self, confpath: str = ""):
         self.confpath = confpath
         self.loops = 1
         self.verbose = False

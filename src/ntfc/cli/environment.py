@@ -58,6 +58,10 @@ class DEnvironmentData:
     modules: Optional[List[str]] = None
     select_individual_tests: Optional[List[int]] = None
 
+    # multi-session
+    runmulti: bool = False
+    manifest: Optional[str] = None
+
     # files
     testpath: Optional[str] = None
     confpath: Optional[str] = None

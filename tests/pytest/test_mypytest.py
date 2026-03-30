@@ -19,7 +19,7 @@
 ############################################################################
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from ntfc.pytest.mypytest import MyPytest
 
@@ -170,6 +170,28 @@ def test_runner_run_device_starts_when_not_alive(
         p = MyPytest(config_dummy)
         path = "./tests/resources/tests_exitcode/test_success.py"
         assert p.runner(path, {}) == 0
+
+
+def test_device_stop_calls_stop(config_dummy, device_dummy):
+    """_device_stop calls device.stop() for each core."""
+    with patch("ntfc.cores.get_device", return_value=device_dummy):
+        p = MyPytest(config_dummy)
+        path = "./tests/resources/tests_exitcode/test_success.py"
+        assert p.runner(path, {}, nologs=True) == 0
+
+        import pytest as _pytest
+
+        for product in _pytest.products:
+            for core_idx in range(len(product.cores)):
+                core = product.core(core_idx)
+                core._device.stop = MagicMock()
+
+        p._device_stop()
+
+        for product in _pytest.products:
+            for core_idx in range(len(product.cores)):
+                core = product.core(core_idx)
+                core._device.stop.assert_called_once()
 
 
 def test_write_session_config_file(config_dummy, tmp_path):

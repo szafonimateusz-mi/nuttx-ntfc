@@ -46,6 +46,10 @@ class DeviceDummy:  # pragma: no cover
         """Start dummy device."""
         self._open = True
 
+    def stop(self) -> None:
+        """Stop dummy device."""
+        self._open = False
+
     def send_cmd_read_until_pattern(
         self, cmd: bytes, pattern: bytes, timeout: int
     ):

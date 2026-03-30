@@ -54,8 +54,8 @@ def test_device_host_open(envconfig_dummy, monkeypatch):
     assert dev.name == "host_unknown"
     assert dev._dev_is_health_priv() is False
 
-    with pytest.raises(IOError):
-        dev.host_close()
+    # stop on non-started device is a no-op
+    dev.stop()
 
     with pytest.raises(ValueError):
         _ = dev._dev_reopen()
@@ -67,7 +67,7 @@ def test_device_host_open(envconfig_dummy, monkeypatch):
 
     assert dev.notalive is True
 
-    with pytest.raises(IOError):
+    with pytest.raises(ExceptionPexpect):
         _ = dev._dev_reopen()
 
     # open executable
@@ -97,8 +97,8 @@ def test_device_host_open(envconfig_dummy, monkeypatch):
     # soft poweroff: sends OS command, no boot wait required
     assert dev.poweroff(hard=False) is True
 
-    # close executable
-    dev.host_close()
+    # stop device
+    dev.stop()
     assert dev.notalive is True
     assert dev._dev_is_health_priv() is False
     assert dev._write(b"a") is None
@@ -113,7 +113,7 @@ def test_device_host_open(envconfig_dummy, monkeypatch):
         return True
 
     dev.poweroff = dummy
-    dev.host_close()
+    dev.stop()
     assert dev.notalive is True
 
     dev.start()

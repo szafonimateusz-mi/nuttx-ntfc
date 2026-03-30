@@ -68,7 +68,7 @@ class DeviceHost(DeviceCommon):
         if not self._cmd:
             raise ValueError("Host open command is empty")
 
-        self.host_close()
+        self._stop_impl()
 
         return self.host_open(self._cmd)
 
@@ -140,10 +140,10 @@ class DeviceHost(DeviceCommon):
 
         return self._child
 
-    def host_close(self) -> None:
-        """Close host-based target device."""
+    def _stop_impl(self) -> None:
+        """Stop host device and kill the underlying process."""
         if not self._child:
-            raise IOError("Host device not ready")
+            return
 
         if self._child.isalive():  # pragma: no cover
             # send power off via software (OS command) to avoid recursion

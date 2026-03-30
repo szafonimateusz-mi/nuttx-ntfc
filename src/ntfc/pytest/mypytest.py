@@ -79,6 +79,7 @@ class MyPytest:
         self._opt: List[str] = []
         self._plugins: List[Any] = []
         self._cfg_module: Dict[str, Any] = {}
+        self.result_dir: str = ""
         self._cfg_test: Dict[str, Any] = {}
 
         if exit_on_fail:
@@ -244,6 +245,23 @@ class MyPytest:
                     f" dependencies not found {dep}"
                 )
 
+    def _device_stop(self) -> None:
+        """Stop all devices that were started for testing."""
+        if not hasattr(pytest, "products"):
+            return  # pragma: no cover
+
+        for product in pytest.products:
+            for core_idx in range(len(product.cores)):
+                core = product.core(core_idx)
+                try:
+                    core._device.stop()
+                except Exception:  # pragma: no cover
+                    logger.warning(
+                        "Failed to stop device %s core %d",
+                        product.name,
+                        core_idx,
+                    )
+
     def _device_start(self) -> None:
         """Start device to test."""
         for product in pytest.products:
@@ -324,6 +342,7 @@ class MyPytest:
             log_manager = LogManager(result.get("logcfg"))
             log_manager.cleanup()
             pytest.result_dir = log_manager.new_session_dir()
+            self.result_dir = pytest.result_dir
             self._write_session_config(pytest.result_dir)
 
             # always include HTML and XML report if logs enabled
@@ -348,7 +367,10 @@ class MyPytest:
         # start device before test start
         self._device_start()
 
-        return self._run(opt, [runner, collector])
+        try:
+            return self._run(opt, [runner, collector])
+        finally:
+            self._device_stop()
 
     def collect(self, testpath: str, reinit: bool = True) -> "Collected":
         """Collect tests.

@@ -194,7 +194,7 @@ class LogManager:
         :return: Absolute path to the newly created session directory.
         """
         name = datetime.now().strftime(self.SESSION_FORMAT)
-        path = os.path.join(self.results_dir, name)
+        path = os.path.abspath(os.path.join(self.results_dir, name))
         os.makedirs(path, exist_ok=True)
         return path
 

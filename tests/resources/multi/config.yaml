@@ -1,0 +1,9 @@
+config:
+  cwd: './external'
+  build_dir: './build'
+product:
+  name: "test-product"
+  cores:
+    core0:
+      name: 'main'
+      device: 'sim'

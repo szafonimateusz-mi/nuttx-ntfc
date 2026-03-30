@@ -1,0 +1,7 @@
+options:
+  fail_fast: false
+  parallel: false
+sessions:
+  - name: "session-a"
+    confpath: "tests/resources/multi/config.yaml"
+    testpath: "tests/resources/tests_exitcode"

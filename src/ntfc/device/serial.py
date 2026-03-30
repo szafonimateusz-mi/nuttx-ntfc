@@ -166,6 +166,13 @@ class DeviceSerial(DeviceCommon):
             return True
         return False
 
+    def _stop_impl(self) -> None:
+        """Stop serial device and close the port."""
+        if self._ser:  # pragma: no cover
+            self._ser.close()
+            self._ser = None
+        logger.info("serial device closed")
+
     def _poweroff_impl(self) -> bool:
         """Hardware poweroff: run the system poweroff command from config.
 

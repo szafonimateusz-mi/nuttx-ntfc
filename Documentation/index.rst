@@ -13,6 +13,7 @@ for NuttX.
    usage
    writing-test-cases
    config-yaml
+   multi-session
    session-json
    report
    api

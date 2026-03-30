@@ -56,6 +56,9 @@ class DeviceMock(DeviceCommon):
     def _start_impl(self):
         """Mock."""
 
+    def _stop_impl(self):
+        """Mock."""
+
     def name(self):
         """Mock."""
 

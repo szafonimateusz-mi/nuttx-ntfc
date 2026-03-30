@@ -362,6 +362,31 @@ def test_main_test_tests(runner, monkeypatch):
     assert result.exit_code == 0
 
 
+MANIFEST_YAML = "./tests/resources/multi/manifest.yaml"
+
+
+def test_main_test_manifest(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.cli.main.MultiSessionRunner",
+        lambda *_a, **_kw: type("R", (), {"run": lambda self: 0})(),
+    )
+
+    args = ["test", f"--manifest={MANIFEST_YAML}"]
+    result = runner.invoke(main, args)
+    assert result.exit_code == 0
+
+
+def test_main_test_manifest_fail(runner, monkeypatch):
+    monkeypatch.setattr(
+        "ntfc.cli.main.MultiSessionRunner",
+        lambda *_a, **_kw: type("R", (), {"run": lambda self: 1})(),
+    )
+
+    args = ["test", f"--manifest={MANIFEST_YAML}"]
+    result = runner.invoke(main, args)
+    assert result.exit_code == 1
+
+
 @pytest.mark.skip("not ready for CI")
 def test_main_build_test(runner, monkeypatch):  # pragma: no cover
 
