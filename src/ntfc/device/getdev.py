@@ -20,7 +20,7 @@
 
 """Get device from a given name."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Dict
 
 from .qemu import DeviceQemu
 from .serial import DeviceSerial
@@ -30,6 +30,13 @@ if TYPE_CHECKING:
     from ntfc.coreconfig import CoreConfig
 
     from .common import DeviceCommon
+
+
+_DEVICE_FACTORIES: Dict[str, Callable[["CoreConfig"], "DeviceCommon"]] = {
+    "sim": DeviceSim,
+    "qemu": DeviceQemu,
+    "serial": DeviceSerial,
+}
 
 ###############################################################################
 # Function: get_device
@@ -43,15 +50,8 @@ def get_device(conf: "CoreConfig", cpu: int = 0) -> "DeviceCommon":
     if not devname:
         raise ValueError("Unspecified device")
 
-    device: "DeviceCommon"
-
-    if devname == "sim":
-        device = DeviceSim(conf)
-    elif devname == "qemu":
-        device = DeviceQemu(conf)
-    elif devname == "serial":
-        device = DeviceSerial(conf)
-    else:
+    factory = _DEVICE_FACTORIES.get(devname)
+    if factory is None:
         raise ValueError("unsupported device")
 
-    return device
+    return factory(conf)
