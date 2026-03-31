@@ -219,7 +219,78 @@ def update_nested_dict(
     return dict1
 
 
-def load_config_files(  # noqa: C901
+def _find_yaml_files(confpath: str) -> List[str]:
+    """Find all YAML files under a directory in deterministic order."""
+    yaml_files = []
+    for root, _dirs, files in os.walk(confpath):
+        for file in files:
+            if file.endswith((".yaml", ".yml")):
+                yaml_files.append(os.path.join(root, file))
+    yaml_files.sort()
+    return yaml_files
+
+
+def _load_yaml_from_directory(confpath: str) -> Dict[str, Any]:
+    """Load and merge YAML files from a directory."""
+    logger.info(f"Loading YAML config directory: {confpath}")
+
+    conf: Dict[str, Any] = {}
+    yaml_files = _find_yaml_files(confpath)
+    logger.info(f"Found {len(yaml_files)} YAML files in directory")
+
+    for yaml_file in yaml_files:
+        logger.info(f"  Loading: {yaml_file}")
+        try:
+            with open(yaml_file, "r", encoding="utf-8") as f:
+                file_conf = yaml.safe_load(f)
+                conf = update_nested_dict(conf, file_conf)
+        except Exception as e:
+            logger.warning(f"  Skipping invalid YAML file: {yaml_file} ({e})")
+
+    if not conf:
+        raise IOError(f"No valid configuration found in directory: {confpath}")
+
+    return conf
+
+
+def _load_yaml_from_file(confpath: str) -> Dict[str, Any]:
+    """Load YAML configuration from a single file."""
+    logger.info(f"Loading YAML config file: {confpath}")
+    with open(confpath, "r", encoding="utf-8") as f:
+        loaded = yaml.safe_load(f)
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _load_json_config(jsonconf: str) -> Dict[str, Any]:
+    """Load optional JSON session config."""
+    logger.info(f"Module config file {jsonconf}")
+    with open(jsonconf, "r", encoding="utf-8") as f:
+        loaded = json.load(f)
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _apply_json_args(
+    conf: Dict[str, Any], conf_json: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Apply ``args`` mapping from JSON config into YAML ``config``."""
+    json_args = conf_json.get("args", {})
+    if isinstance(json_args, Mapping):
+        conf["config"] = update_nested_dict(conf.get("config", {}), json_args)
+    return conf
+
+
+def _build_if_needed(ctx: Environment, conf: Dict[str, Any]) -> Dict[str, Any]:
+    """Run optional auto-build/flash flow and return updated config."""
+    builder = NuttXBuilder(conf, ctx.rebuild)
+    if builder.need_build():
+        builder.build_all()
+        if ctx.flash:
+            builder.flash_all()
+        conf = builder.new_conf()
+    return conf
+
+
+def load_config_files(
     ctx: Environment,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Load configuration from config files.
@@ -227,71 +298,25 @@ def load_config_files(  # noqa: C901
     If confpath is a directory, load all YAML files in that directory
     and merge them. If it's a file, load that single file.
     """
-    conf: Dict[str, Any] = {}
     assert ctx.confpath is not None
 
-    # Check if confpath is a directory or file
     if os.path.isdir(ctx.confpath):
-        # Directory mode: load all YAML files and merge them
-        logger.info(f"Loading YAML config directory: {ctx.confpath}")
-
-        yaml_files = []
-        for root, _dirs, files in os.walk(ctx.confpath):
-            for file in files:
-                if file.endswith((".yaml", ".yml")):
-                    yaml_files.append(os.path.join(root, file))
-
-        # Sort files for consistent merge order
-        yaml_files.sort()
-        logger.info(f"Found {len(yaml_files)} YAML files in directory")
-
-        # Load and merge all YAML files
-        for yaml_file in yaml_files:
-            logger.info(f"  Loading: {yaml_file}")
-            try:
-                with open(yaml_file, "r", encoding="utf-8") as f:
-                    file_conf = yaml.safe_load(f)
-                    conf = update_nested_dict(conf, file_conf)
-            except Exception as e:
-                logger.warning(
-                    f"  Skipping invalid YAML file: {yaml_file} ({e})"
-                )
-
-        if not conf:
-            raise IOError(
-                f"No valid configuration found in directory: {ctx.confpath}"
-            )
-
+        conf = _load_yaml_from_directory(ctx.confpath)
     else:
-        # File mode: load single file
-        logger.info(f"Loading YAML config file: {ctx.confpath}")
-        with open(ctx.confpath, "r", encoding="utf-8") as f:
-            conf = yaml.safe_load(f)
+        conf = _load_yaml_from_file(ctx.confpath)
 
     conf["config"]["loops"] = ctx.loops
 
-    conf_json = {}
+    conf_json: Dict[str, Any] = {}
     if ctx.jsonconf:  # pragma: no cover
-        logger.info(f"Module config file {ctx.jsonconf}")
-        with open(ctx.jsonconf, "r", encoding="utf-8") as f:
-            conf_json = json.load(f)
+        conf_json = _load_json_config(ctx.jsonconf)
 
-    json_args = conf_json.get("args", {})
-    if isinstance(json_args, Mapping):
-        conf["config"] = update_nested_dict(conf.get("config", {}), json_args)
+    conf = _apply_json_args(conf, conf_json)
 
     print_yaml_config(conf)
     print_json_config(conf_json)
 
-    # handle auto build feature
-    builder = NuttXBuilder(conf, ctx.rebuild)
-    if builder.need_build():
-        builder.build_all()
-        if ctx.flash:
-            builder.flash_all()
-
-        # update config
-        conf = builder.new_conf()
+    conf = _build_if_needed(ctx, conf)
 
     return conf, conf_json
 
