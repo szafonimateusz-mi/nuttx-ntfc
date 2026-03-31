@@ -281,7 +281,7 @@ class DeviceCommon(ABC):
                 self._state_mgr.set_unhealthy("Flood detected")
             self._console_log(chunk)
 
-        return CmdReturn(ret, _match, output.decode("utf-8"))
+        return CmdReturn(ret, _match, output.decode("utf-8", errors="replace"))
 
     @DeviceStateManager.mark_command
     def send_cmd_read_until_pattern(

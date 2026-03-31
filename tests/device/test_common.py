@@ -179,6 +179,21 @@ def test_device_common_send_cmd_fail_pattern():
         assert ret.status == CmdStatus.SUCCESS
 
 
+def test_device_common_decodes_invalid_utf8_with_replacement():
+    with patch("ntfc.envconfig.EnvConfig") as mockdevice:
+        global g_mock_read
+
+        config = mockdevice.return_value
+        dev = DeviceMock(config)
+
+        g_mock_read = b"\xff\xfeOK"
+        ret = dev.send_cmd_read_until_pattern(b"", b"OK", 1)
+
+        assert ret.status == CmdStatus.SUCCESS
+        assert "\ufffd" in ret.output
+        assert "OK" in ret.output
+
+
 def test_device_common_read_until_pattern():
 
     with patch("ntfc.envconfig.EnvConfig") as mockdevice:
