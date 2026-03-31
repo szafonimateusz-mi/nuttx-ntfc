@@ -389,12 +389,15 @@ class MyPytest:
         # collector plugin
         collector = CollectorPlugin(self._config, True)
 
-        # run pytest with our custom collector plugin
-        self._run([testpath], [collector])
+        try:
+            # run pytest with our custom collector plugin
+            self._run([testpath], [collector])
 
-        collected = Collected(
-            collector.filtered, collector.skipped_items, collector.allitems
-        )
+            collected = Collected(
+                collector.filtered, collector.skipped_items, collector.allitems
+            )
 
-        # return result
-        return collected
+            # return result
+            return collected
+        finally:
+            self._device_stop()

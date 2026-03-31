@@ -21,6 +21,8 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from ntfc.pytest.mypytest import MyPytest
 
 
@@ -206,3 +208,44 @@ def test_write_session_config_file(config_dummy, tmp_path):
         merged = json.load(f)
 
     assert merged == config_dummy
+
+
+def test_collect_stops_device_on_collection_error(
+    config_dummy, device_dummy, monkeypatch
+):
+    """collect() must stop devices even if collection run raises."""
+    with patch("ntfc.cores.get_device", return_value=device_dummy):
+        p = MyPytest(config_dummy)
+        stop_mock = MagicMock()
+        monkeypatch.setattr(p, "_device_stop", stop_mock)
+        monkeypatch.setattr(p, "_init_pytest", lambda _path: None)
+        monkeypatch.setattr(p, "_device_start", lambda: None)
+
+        def _raise(_opt, _plugins):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(p, "_run", _raise)
+
+        with pytest.raises(RuntimeError, match="boom"):
+            p.collect("tests", reinit=True)
+
+        stop_mock.assert_called_once()
+
+
+def test_collect_stops_device_on_collection_success(
+    config_dummy, device_dummy, monkeypatch
+):
+    """collect() stops devices on successful collection path too."""
+    with patch("ntfc.cores.get_device", return_value=device_dummy):
+        p = MyPytest(config_dummy)
+        stop_mock = MagicMock()
+        monkeypatch.setattr(p, "_device_stop", stop_mock)
+        monkeypatch.setattr(p, "_init_pytest", lambda _path: None)
+        monkeypatch.setattr(p, "_device_start", lambda: None)
+        monkeypatch.setattr(p, "_run", lambda _opt, _plugins: 0)
+        col = p.collect("tests", reinit=True)
+
+        assert len(col.allitems) == 0
+        assert len(col.items) == 0
+        assert len(col.skipped) == 0
+        stop_mock.assert_called_once()
