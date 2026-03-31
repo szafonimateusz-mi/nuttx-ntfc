@@ -1,3 +1,5 @@
+# Moved to https://github.com/apache/nuttx-ntfc
+
 # NTFC
 
 NuttX Test Framework for Community.
