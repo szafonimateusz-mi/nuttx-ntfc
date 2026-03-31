@@ -17,7 +17,6 @@ for NuttX.
    session-json
    report
    api
-   roadmap
 
 Indices and tables
 ==================
