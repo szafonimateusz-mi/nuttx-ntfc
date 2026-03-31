@@ -76,8 +76,8 @@ The ``cmocka_parser`` fixture supports the
 discovered by running ``<binary> --list`` on the target and executed
 individually with ``<binary> --test <name>``.
 
-Basic Usage
------------
+Gtest Basic Usage
+-----------------
 
 Add ``@pytest.mark.parser_binary`` and request the ``cmocka_parser`` fixture.
 The marker takes the **NuttX shell command name** of the binary — the same
@@ -101,8 +101,8 @@ Pytest output for a binary with three tests:
    FAILED  test_cmocka_suite[test_bar]
    PASSED  test_cmocka_suite[test_baz]
 
-Filtered Discovery
-------------------
+Gtest Filtered Discovery
+------------------------
 
 Pass an optional ``filter`` kwarg to limit discovered tests to names
 matching a shell-style wildcard pattern (applied via :func:`fnmatch.fnmatch`):
@@ -114,8 +114,8 @@ matching a shell-style wildcard pattern (applied via :func:`fnmatch.fnmatch`):
        result = cmocka_parser.run_single()
        assert result.passed, result.output
 
-Running All or Filtered Tests Programmatically
-----------------------------------------------
+Gtest Running All or Filtered Tests Programmatically
+----------------------------------------------------
 
 .. code-block:: python
 
