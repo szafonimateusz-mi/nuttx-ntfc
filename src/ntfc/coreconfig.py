@@ -61,12 +61,18 @@ class CoreConfig:
 
                 # parse option value
                 val_parsed: Union[bool, str, int]
-                if val.startswith("y"):
+                if val == "y":
                     val_parsed = True
+                elif val == "n":
+                    val_parsed = False
                 elif "0x" in val:
                     val_parsed = int(val.rstrip(), 16)
-                else:
+                elif val.isdigit():
+                    val_parsed = int(val)
+                elif val.startswith('"') and val.endswith('"'):
                     val_parsed = val[1:-1]
+                else:
+                    val_parsed = val
 
                 self._kv_values[name] = val_parsed
 

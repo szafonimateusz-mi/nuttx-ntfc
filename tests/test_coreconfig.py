@@ -70,6 +70,27 @@ def test_load_core_config_malformed_line(tmp_path):
     assert p.kv_check("MALFORMED_NO_EQUALS") is False
 
 
+def test_load_core_config_value_types(tmp_path):
+    cfg_file = tmp_path / "kv_config_types"
+    cfg_file.write_text(
+        "CONFIG_DECIMAL=123\n"
+        "CONFIG_HEX=0x10\n"
+        "CONFIG_BOOL_Y=y\n"
+        "CONFIG_BOOL_N=n\n"
+        'CONFIG_QUOTED="hello"\n'
+        "CONFIG_UNQUOTED=plain_text\n"
+    )
+    conf = {"name": "dummy", "conf_path": str(cfg_file)}
+    p = CoreConfig(conf)
+
+    assert p.kv_check("CONFIG_DECIMAL") == 123
+    assert p.kv_check("CONFIG_HEX") == 0x10
+    assert p.kv_check("CONFIG_BOOL_Y") is True
+    assert p.kv_check("CONFIG_BOOL_N") is False
+    assert p.kv_check("CONFIG_QUOTED") == "hello"
+    assert p.kv_check("CONFIG_UNQUOTED") == "plain_text"
+
+
 def test_core_config_prompt():
     # Test with explicit prompt in YAML config
     conf = {
