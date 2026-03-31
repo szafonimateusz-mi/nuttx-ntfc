@@ -21,6 +21,7 @@
 import pytest  # type: ignore
 from click.testing import CliRunner
 
+from ntfc.builder import BuilderConfigError
 from ntfc.cli.main import main
 from ntfc.products import ProductsHandler
 
@@ -272,6 +273,25 @@ def test_main_test_rebuild_default_and_override(runner, monkeypatch):
     assert result.exit_code == 0
 
     assert seen == [True, False]
+
+
+def test_main_reports_builder_config_error(runner, monkeypatch):
+    def fake_load_config_files(_ctx):
+        raise BuilderConfigError("not found build_dir in YAML configuration")
+
+    monkeypatch.setattr(
+        "ntfc.cli.main.load_config_files", fake_load_config_files
+    )
+
+    args = [
+        "test",
+        "--collect-only",
+        "--confpath=./tests/resources/nuttx/sim/config.yaml",
+        "--testpath=./tests/resources/tests_collect",
+    ]
+    result = runner.invoke(main, args)
+    assert result.exit_code == 1
+    assert "not found build_dir in YAML configuration" in result.output
 
 
 def test_main_test_modules(runner, monkeypatch):

@@ -24,11 +24,14 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ntfc.log.logger import logger
+
+
+class BuilderConfigError(ValueError):
+    """Invalid build configuration in YAML."""
 
 
 class NuttXBuilder:
@@ -360,13 +363,13 @@ class NuttXBuilder:
 
             cfg_build_dir = self._cfg_values["config"].get("build_dir", None)
             if not cfg_build_dir:  # pragma: no cover
-                print("ERROR: not found build_dir in YAML configuration!")
-                sys.exit(1)
+                raise BuilderConfigError(
+                    "not found build_dir in YAML configuration"
+                )
 
             cfg_cwd = self._cfg_values["config"].get("cwd", None)
             if not cfg_cwd:  # pragma: no cover
-                print("ERROR: not found cwd in YAML configuration!")
-                sys.exit(1)
+                raise BuilderConfigError("not found cwd in YAML configuration")
 
             build_path = os.path.join(cfg_build_dir, build_dir)
             build_cfg = cores[core]["defconfig"]

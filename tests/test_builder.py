@@ -25,7 +25,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ntfc.builder import NuttXBuilder
+from ntfc.builder import BuilderConfigError, NuttXBuilder
 
 conf_dir = {
     "config": {"cwd": "aaa", "build_dir": "bbb"},
@@ -460,3 +460,27 @@ def test_builder_applies_kv_before_build() -> None:
         assert any(
             "Applying Kconfig overrides before build:" == msg for msg in logs
         )
+
+
+def test_builder_raises_when_build_dir_missing() -> None:
+    config = copy.deepcopy(conf_dir)
+    config["product"]["cores"]["core0"]["defconfig"] = "dummy/path"
+    del config["config"]["build_dir"]
+    b = NuttXBuilder(config)
+
+    with pytest.raises(
+        BuilderConfigError, match="not found build_dir in YAML configuration"
+    ):
+        b.build_all()
+
+
+def test_builder_raises_when_cwd_missing() -> None:
+    config = copy.deepcopy(conf_dir)
+    config["product"]["cores"]["core0"]["defconfig"] = "dummy/path"
+    del config["config"]["cwd"]
+    b = NuttXBuilder(config)
+
+    with pytest.raises(
+        BuilderConfigError, match="not found cwd in YAML configuration"
+    ):
+        b.build_all()

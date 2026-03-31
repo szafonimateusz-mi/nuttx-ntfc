@@ -31,7 +31,7 @@ import click
 import yaml  # type: ignore
 from prettytable import PrettyTable
 
-from ntfc.builder import NuttXBuilder
+from ntfc.builder import BuilderConfigError, NuttXBuilder
 from ntfc.cli.environment import Environment, pass_environment
 from ntfc.log.logger import logger
 from ntfc.multi import ManifestConfig, MultiSessionRunner
@@ -330,7 +330,10 @@ def cli_on_close(ctx: Environment) -> bool:
         return True
 
     # load configuration
-    conf, conf_json = load_config_files(ctx)
+    try:
+        conf, conf_json = load_config_files(ctx)
+    except BuilderConfigError as exc:
+        raise click.ClickException(str(exc)) from exc
 
     # exit now when build only mode
     if ctx.runbuild:
