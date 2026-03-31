@@ -18,6 +18,8 @@
 #
 ############################################################################
 
+from unittest.mock import MagicMock
+
 import pytest
 import yaml
 
@@ -136,6 +138,20 @@ def test_envconfig_extra_check(envconfig_dummy):
 
     # Test with empty string
     assert envconfig_dummy.extra_check("") is False
+
+
+def test_envconfig_cmd_check_respects_product_index():
+    """cmd_check should use the requested product index."""
+    env = EnvConfig({"config": {}, "product": {"name": "p0", "cores": {}}})
+    p0 = MagicMock()
+    p1 = MagicMock()
+    p0.cmd_check.return_value = False
+    p1.cmd_check.return_value = True
+    env._products = [p0, p1]
+
+    assert env.cmd_check("hello_main", product=1, core=0) is True
+    p1.cmd_check.assert_called_once_with("hello_main", 0)
+    p0.cmd_check.assert_not_called()
 
 
 def test_envconfig_recovery_defaults():

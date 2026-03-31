@@ -135,7 +135,6 @@ class EnvConfig:
         :param product: Product index (default: 0)
         :param core: Core index (0, 1, 2) or name ('main', 'cpu1', 'cpu2')
         """
-        product = 0
         return self._products[product].cmd_check(cmd, core)
 
     def extra_check(
