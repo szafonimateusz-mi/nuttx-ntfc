@@ -19,6 +19,7 @@
 ############################################################################
 
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest as pytest
@@ -487,3 +488,131 @@ def test_switch_to_core_fixture_switch_back_failure(config_dummy, monkeypatch):
 
     # Verify switch back was attempted (second call)
     assert mock_core0.switch_core.call_count == 2
+
+
+def _run_makereport_hook(plugin, item, call, report):
+    outcome = MagicMock()
+    outcome.get_result.return_value = report
+    gen = plugin.pytest_runtest_makereport(item, call)
+    next(gen)
+    with pytest.raises(StopIteration):
+        gen.send(outcome)
+
+
+def test_failure_reason_from_product_variants(config_dummy, monkeypatch):
+    plugin = PytestConfigPlugin(config_dummy)
+
+    cases = [
+        (
+            SimpleNamespace(
+                crash=True, busyloop=False, flood=False, notalive=False
+            ),
+            (True, "crash", '"Device crashed"'),
+        ),
+        (
+            SimpleNamespace(
+                crash=False, busyloop=True, flood=False, notalive=False
+            ),
+            (True, "busy_loop", '"Device busy_loop"'),
+        ),
+        (
+            SimpleNamespace(
+                crash=False, busyloop=False, flood=True, notalive=False
+            ),
+            (True, "flood", '"Device flood"'),
+        ),
+        (
+            SimpleNamespace(
+                crash=False, busyloop=False, flood=False, notalive=True
+            ),
+            (True, "not_alive", '"Device not alive"'),
+        ),
+        (
+            SimpleNamespace(
+                crash=False, busyloop=False, flood=False, notalive=False
+            ),
+            (False, "", ""),
+        ),
+    ]
+
+    for product, expected in cases:
+        fake_pytest = SimpleNamespace(product=product)
+        monkeypatch.setattr("ntfc.pytest.configure.pytest", fake_pytest)
+        assert plugin._failure_reason_from_product() == expected
+
+
+def test_is_crash_check_phase(config_dummy):
+    plugin = PytestConfigPlugin(config_dummy)
+    item = SimpleNamespace()
+
+    assert plugin._is_crash_check_phase(item, SimpleNamespace(when="setup"))
+    assert plugin._is_crash_check_phase(item, SimpleNamespace(when="call"))
+    assert plugin._is_crash_check_phase(item, SimpleNamespace(when="teardown"))
+
+    item2 = SimpleNamespace(_setup_call_failed=True)
+    assert not plugin._is_crash_check_phase(
+        item2, SimpleNamespace(when="teardown")
+    )
+
+
+def test_debug_wait_seconds_variants(config_dummy, monkeypatch):
+    plugin = PytestConfigPlugin(config_dummy)
+
+    fake_pytest = SimpleNamespace(debug_time=7)
+    monkeypatch.setattr("ntfc.pytest.configure.pytest", fake_pytest)
+    assert plugin._debug_wait_seconds("failed", True) == 7
+    assert plugin._debug_wait_seconds("failed", False) == 0
+    assert plugin._debug_wait_seconds("passed", True) == 0
+
+    fake_pytest2 = SimpleNamespace()
+    monkeypatch.setattr("ntfc.pytest.configure.pytest", fake_pytest2)
+    assert plugin._debug_wait_seconds("failed", True) == 1800
+
+
+def test_pytest_runtest_makereport_crash_path(config_dummy, monkeypatch):
+    product = SimpleNamespace(
+        crash=True, busyloop=False, flood=False, notalive=False
+    )
+    fake_pytest = SimpleNamespace(product=product, result_dir="")
+    monkeypatch.setattr("ntfc.pytest.configure.pytest", fake_pytest)
+
+    plugin = PytestConfigPlugin(config_dummy)
+    plugin._generate_coredump_file = MagicMock()
+    plugin._device_reboot = MagicMock()
+
+    item = SimpleNamespace()
+    call = SimpleNamespace(when="call")
+    report = SimpleNamespace(outcome="passed", longrepr="")
+
+    _run_makereport_hook(plugin, item, call, report)
+
+    assert report.outcome == "failed"
+    assert report.longrepr == '"Device crashed" detected, during: call'
+    assert getattr(item, "_setup_call_failed", False) is True
+    plugin._generate_coredump_file.assert_called_once_with("crash")
+    plugin._device_reboot.assert_called_once()
+
+
+def test_pytest_runtest_makereport_crash_teardown_path(
+    config_dummy, monkeypatch
+):
+    product = SimpleNamespace(
+        crash=True, busyloop=False, flood=False, notalive=False
+    )
+    fake_pytest = SimpleNamespace(product=product, result_dir="")
+    monkeypatch.setattr("ntfc.pytest.configure.pytest", fake_pytest)
+
+    plugin = PytestConfigPlugin(config_dummy)
+    plugin._generate_coredump_file = MagicMock()
+    plugin._device_reboot = MagicMock()
+
+    item = SimpleNamespace()
+    call = SimpleNamespace(when="teardown")
+    report = SimpleNamespace(outcome="passed", longrepr="")
+
+    _run_makereport_hook(plugin, item, call, report)
+
+    assert report.outcome == "failed"
+    assert not hasattr(item, "_setup_call_failed")
+    plugin._generate_coredump_file.assert_called_once_with("crash")
+    plugin._device_reboot.assert_called_once()

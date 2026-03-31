@@ -194,7 +194,45 @@ class PytestConfigPlugin:
         if self._recovery_failed:  # pragma: no cover
             pytest.skip("Device recovery failed, skipping remaining tests")
 
-    def pytest_runtest_makereport(  # noqa: C901
+    @staticmethod
+    def _failure_reason_from_product() -> tuple[bool, str, str]:
+        """Return failure flags/reason from current product state.
+
+        :return: Tuple of (has_failure, reason, longrepr_prefix).
+        """
+        if pytest.product.crash:
+            return True, "crash", '"Device crashed"'
+        if pytest.product.busyloop:
+            return True, "busy_loop", '"Device busy_loop"'
+        if pytest.product.flood:
+            return True, "flood", '"Device flood"'
+        if pytest.product.notalive:
+            return True, "not_alive", '"Device not alive"'
+        return False, "", ""
+
+    @staticmethod
+    def _is_crash_check_phase(
+        item: pytest.Item, call: pytest.CallInfo[None]
+    ) -> bool:
+        """Check if crash state should be applied to this phase."""
+        if call.when in ("setup", "call"):
+            return True
+        return call.when == "teardown" and not hasattr(
+            item, "_setup_call_failed"
+        )
+
+    @staticmethod
+    def _debug_wait_seconds(
+        report_outcome: str, busyloop_crash_flag: bool
+    ) -> int:
+        """Return debug wait duration in seconds."""
+        if report_outcome == "failed" and busyloop_crash_flag:
+            return pytest.debug_time if hasattr(pytest, "debug_time") else 1800
+        if report_outcome == "failed" and not busyloop_crash_flag:
+            return 0
+        return 0
+
+    def pytest_runtest_makereport(
         self, item: pytest.Item, call: pytest.CallInfo[None]
     ) -> Any:
         """Create a TestReport for each of the runtest phases.
@@ -220,51 +258,29 @@ class PytestConfigPlugin:
             f" notalive {pytest.product.notalive}"
         )
 
+        has_failure, failure_reason, failure_longrepr = (
+            self._failure_reason_from_product()
+        )
+
         # Check for crashes in any phase
-        if (
-            pytest.product.busyloop
-            or pytest.product.flood
-            or pytest.product.crash
-            or pytest.product.notalive
-        ):
-            if call.when in ("setup", "call") or (  # pragma: no cover
-                call.when == "teardown"
-                and not hasattr(item, "_setup_call_failed")
-            ):
-                logger.debug(f"pytest_runtest_makereport: {call.when}")
+        if has_failure and self._is_crash_check_phase(item, call):
+            logger.debug(f"pytest_runtest_makereport: {call.when}")
 
-                # Mark the report as failed due to crash
-                report.outcome = "failed"
+            # Mark the report as failed due to crash
+            report.outcome = "failed"
+            reason = failure_reason
+            report.longrepr = (
+                f"{failure_longrepr} detected, during: {call.when}"
+            )
 
-                if pytest.product.crash:
-                    reason = "crash"
-                    report.longrepr = (
-                        f'"Device crashed" detected, during: {call.when}'
-                    )
-                elif pytest.product.busyloop:
-                    reason = "busy_loop"
-                    report.longrepr = (
-                        f'"Device busy_loop" detected, during: {call.when}'
-                    )
-                elif pytest.product.flood:
-                    reason = "flood"
-                    report.longrepr = (
-                        f'"Device flood" detected, during: {call.when}'
-                    )
-                else:
-                    reason = "not_alive"
-                    report.longrepr = (
-                        f'"Device not alive" detected, during: {call.when}'
-                    )
+            # For setup phase, we need to prevent the test from running
+            if call.when in ("setup", "call"):
+                item._setup_call_failed = True
 
-                # For setup phase, we need to prevent the test from running
-                if call.when in ("setup", "call"):
-                    item._setup_call_failed = True
-
-                need_coredump = True
-                need_reboot = True
-                need_notify = True
-                busyloop_crash_flag = True
+            need_coredump = True
+            need_reboot = True
+            need_notify = True
+            busyloop_crash_flag = True
 
         if (
             report.outcome == "failed"
@@ -284,15 +300,9 @@ class PytestConfigPlugin:
                 f" on-site debugging ..."
             )
             pytest.notify.trigger_notify_with_more_info(pytest.result_dir)
-
-            if report.outcome == "failed" and busyloop_crash_flag:
-                debug_time = (
-                    pytest.debug_time
-                    if hasattr(pytest, "debug_time")
-                    else 1800
-                )
-            elif report.outcome == "failed" and not busyloop_crash_flag:
-                debug_time = 0
+            debug_time = self._debug_wait_seconds(
+                report.outcome, busyloop_crash_flag
+            )
 
         if need_coredump:
             # Handle core dump generation if needed
