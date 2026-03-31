@@ -18,27 +18,33 @@
 #
 ############################################################################
 
-"""Parallel execution utilities for handlers."""
+import time
 
-from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, List, TypeVar
+import pytest
 
-T = TypeVar("T")
+from ntfc.parallel import run_parallel
 
 
-def run_parallel(
-    items: List[T],
-    fn: Callable[[T], Any],
-) -> List[Any]:
-    """Run a callable on all items in parallel, preserving order.
+def test_run_parallel_empty_returns_empty_list() -> None:
+    assert run_parallel([], lambda item: item) == []
 
-    :param items: List of objects to execute on.
-    :param fn: Callable invoked with each item as its sole argument.
-    :return: List of results in the same order as *items*.
-    """
-    if not items:
-        return []
 
-    with ThreadPoolExecutor(max_workers=len(items)) as executor:
-        futures = [executor.submit(fn, item) for item in items]
-        return [future.result() for future in futures]
+def test_run_parallel_preserves_input_order() -> None:
+    items = [1, 2, 3]
+
+    def worker(item: int) -> int:
+        # Delay inversely to item value to force out-of-order completion.
+        time.sleep((4 - item) * 0.01)
+        return item * 10
+
+    assert run_parallel(items, worker) == [10, 20, 30]
+
+
+def test_run_parallel_propagates_worker_exception() -> None:
+    def worker(item: int) -> int:
+        if item == 2:
+            raise ValueError("boom")
+        return item
+
+    with pytest.raises(ValueError, match="boom"):
+        run_parallel([1, 2, 3], worker)
